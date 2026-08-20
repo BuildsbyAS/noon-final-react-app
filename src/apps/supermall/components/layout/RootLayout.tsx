@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Retune } from 'retune';
 import { WishlistOverlay } from './WishlistOverlay';
+import { CelebrationOverlay } from '@ui';
 import { BottomNav } from '@ui/BottomNav';
 import type { Tab } from '@ui/BottomNav/BottomNav';
 import { backState } from '@ui';
@@ -84,6 +85,7 @@ export function RootLayout() {
       </main>
       <WishlistOverlay />
       <AddressBottomSheet open={addressSheetOpen} onClose={closeAddressSheet} />
+      <CelebrationOverlay />
       <Retune />
       {!hideNav && (
         <BottomNav

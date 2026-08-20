@@ -14,5 +14,8 @@ export { BottomSheet } from './BottomSheet';
 export type { BottomSheetProps } from './BottomSheet';
 export { PageTransition, backState, forwardState } from './PageTransition';
 export type { PageTransitionProps, PageDirection } from './PageTransition';
+export { CelebrationOverlay, triggerCelebration } from './Celebration/CelebrationOverlay';
+export { hapticTick, celebrationHaptics } from './Celebration/haptics';
+export { stopJingle } from './Celebration/sound';
 export * as Icons from './icons';
 export * from './icons';

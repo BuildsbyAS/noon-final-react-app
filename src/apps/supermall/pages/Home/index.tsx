@@ -2,7 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { PageTransition } from '../../components/layout/PageTransition';
-import { ProductCard, CameraIcon, SearchIcon, StatusBar } from '@ui';
+import { ProductCard, CameraIcon, SearchIcon, StatusBar, triggerCelebration, stopJingle } from '@ui';
+import { BdayModeToggle } from '../../components/birthday/BdayModeToggle';
+import { BirthdayCountdown } from '../../components/birthday/BirthdayCountdown';
+import { useBirthdayStore } from '@state/birthdayStore';
 import type { Variants } from 'framer-motion';
 import { CategoryCard } from '../../components/ui/CategoryCard';
 import { homeCategories as categories } from '../../data/categories';
@@ -163,6 +166,16 @@ function HomeHeader({ progress, scrolled, onAddressTap, onTileTap }: HomeHeaderP
   const navigate = useNavigate();
   const openFullWishlist = useWishlistStore((s) => s.openFullWishlist);
 
+  const birthdayMode = useBirthdayStore((s) => s.birthdayMode);
+  const setBirthdayMode = useBirthdayStore((s) => s.setBirthdayMode);
+
+  // Switching BDAY mode on is the celebration trigger; switching off is quiet.
+  function handleBirthdayToggle(on: boolean) {
+    setBirthdayMode(on);
+    if (on) triggerCelebration();
+    else stopJingle();
+  }
+
   // Continuous, scroll-driven morph values. Bound directly to scroll progress
   // (no spring) so geometry tracks the user's input 1:1 — no perceived lag on
   // mouse-wheel or trackpad. The morph range is set wide enough at the page
@@ -183,9 +196,14 @@ function HomeHeader({ progress, scrolled, onAddressTap, onTileTap }: HomeHeaderP
   const compactOpacity = useTransform(progress, [0.55, 1], [0, 1]);
   const compactScale = useTransform(progress, [0.55, 1], [0.92, 1]);
 
+  // The birthday band grows the header and fades away with the scroll morph,
+  // the same way the address row does.
+  const bdayHeight = useTransform(progress, [0, 1], [BDAY_BAND_HEIGHT, 0]);
+  const bdayOpacity = useTransform(progress, [0, 0.55], [1, 0]);
+
   return (
     <section
-      className={`home-header${scrolled ? ' is-scrolled' : ''}`}
+      className={`home-header${scrolled ? ' is-scrolled' : ''}${birthdayMode ? ' is-birthday' : ''}`}
       aria-label="noon home"
     >
       <StatusBar tone="dark" />
@@ -273,9 +291,27 @@ function HomeHeader({ progress, scrolled, onAddressTap, onTileTap }: HomeHeaderP
           <CameraIcon size={20} color="var(--color-text-tertiary)" />
         </button>
       </motion.div>
+
+      {/* The birthday lead-up shows all month; BDAY mode only changes the skin. */}
+      <motion.div
+        className="home-header__bday"
+        style={{ height: bdayHeight, opacity: bdayOpacity, marginTop: 12 }}
+      >
+        <div className="home-header__bday-left">
+          <p className="home-header__bday-title">Your birthday is in</p>
+          <BirthdayCountdown />
+        </div>
+        <img src="/birthday-gifts.png" alt="" className="home-header__bday-art" />
+        <div className="home-header__bday-toggle">
+          <BdayModeToggle on={birthdayMode} onChange={handleBirthdayToggle} />
+        </div>
+      </motion.div>
     </section>
   );
 }
+
+/** Height of the birthday band (headline + countdown) when expanded. */
+const BDAY_BAND_HEIGHT = 102;
 
 /* ─── Shop by category — 2-row horizontal scroll grid ──────────────── */
 function ShopByCategory({

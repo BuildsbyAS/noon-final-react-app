@@ -78,6 +78,19 @@ export function ProfileDefault({ color }: P) {
   );
 }
 
+/** Birthday variant — the avatar wearing a party hat. Hat colours are fixed;
+ *  the figure follows the tab's active/default colour like the other icons. */
+export function ProfileBirthday({ color }: P) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden>
+      <path d="M11.2067 20.96L8.79004 23.86C10.6884 25.6033 13.22 26.6667 16 26.6667C18.78 26.6667 21.3167 25.6 23.2167 23.8533L20.805 20.96C20.2984 20.3517 19.5484 20 18.7567 20H13.255C12.4634 20 11.7134 20.3517 11.2067 20.96Z" fill={color} stroke={color} strokeLinejoin="round" />
+      <path d="M16.0067 17.3333C18.2159 17.3333 20.0067 15.5425 20.0067 13.3333C20.0067 11.1242 18.2159 9.33333 16.0067 9.33333C13.7976 9.33333 12.0067 11.1242 12.0067 13.3333C12.0067 15.5425 13.7976 17.3333 16.0067 17.3333Z" fill={color} />
+      <path d="M20.8154 4.447L20.0067 13.3334L13.6318 9.74021L20.8154 4.447Z" fill="#FF6464" />
+      <circle cx="20.7868" cy="4.37854" r="1.51196" transform="rotate(-8.92273 20.7868 4.37854)" fill="#FFDE0A" />
+    </svg>
+  );
+}
+
 export function ProfileSelected({ color }: P) {
   return (
     <svg viewBox="0 0 32 32" fill="none" aria-hidden>

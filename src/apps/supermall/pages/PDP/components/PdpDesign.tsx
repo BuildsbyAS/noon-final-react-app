@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { ChevronLeft, SearchIcon, HeartOutline, ShareIcon, StatusBar } from "@ui";
+import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
+import { ChevronLeft, SearchIcon, HeartOutline, ShareIcon, StatusBar, MinusIcon, PlusIcon } from "@ui";
 import "./PdpDesign.css";
 
 // — Product images (PNG) —
@@ -1084,7 +1084,76 @@ function ProductDetails() {
   );
 }
 
+const BALLOON_COLORS = ["#FF2E7E", "#FFB300", "#00D68F", "#7C4DFF", "#00C2FF", "#FF5A36"];
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
+const DRAFT_TIMES = [0, 0.5, 1];
+
+/** Gentle drift from 0 toward `bias`, with a small mid-flight `wobble` — reads as a light draft, not a straight line. */
+function draftPath(bias: number, wobble: number) {
+  const mid = bias * 0.5 + (Math.random() - 0.5) * wobble;
+  return [0, mid, bias];
+}
+
+interface BalloonState {
+  id: number;
+  x: number;
+  color: string;
+  size: number;
+  riseHeight: number;
+  xPath: number[];
+  rotatePath: number[];
+  duration: number;
+}
+
+const stepperContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
+};
+
+const stepperItem = {
+  hidden: { opacity: 0, scale: 0.5, y: 6 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { type: "spring" as const, duration: 0.45, bounce: 0.5 },
+  },
+};
+
 function BottomBar() {
+  const [cartCount, setCartCount] = useState(0);
+  const [balloons, setBalloons] = useState<BalloonState[]>([]);
+  const nextBalloonId = useRef(0);
+
+  function popBalloons() {
+    const count = 4 + Math.floor(Math.random() * 4); // always at least 4, up to 7
+    const burst: BalloonState[] = Array.from({ length: count }, () => {
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      return {
+        id: nextBalloonId.current++,
+        x: Math.random() * 60 - 30,
+        color: BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)],
+        size: 0.8 + Math.random() * 0.5,
+        riseHeight: 58 + Math.random() * 40,
+        xPath: draftPath(dir * (6 + Math.random() * 6), 3),
+        rotatePath: draftPath(dir * (4 + Math.random() * 4), 3),
+        duration: 2.2 + Math.random() * 0.6,
+      };
+    });
+    setBalloons((prev) => [...prev, ...burst]);
+  }
+
+  function handleAdd(e: React.MouseEvent) {
+    e.stopPropagation();
+    setCartCount((c) => c + 1);
+    popBalloons();
+  }
+
+  function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation();
+    setCartCount((c) => Math.max(0, c - 1));
+  }
+
   return (
     <div className="sticky bottom-0 z-20 rounded-t-xl bg-white px-3 pt-3 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
       <div className="flex h-12 items-center gap-2">
@@ -1093,12 +1162,126 @@ function BottomBar() {
           <span className="text-base font-bold text-bluegray-800">1</span>
         </div>
         <button className="h-12 flex-1 rounded-[10px] border border-solid border-noon-blue text-sm font-bold text-noon-blue">Buy now</button>
-        <button className="h-12 flex-1 rounded-[10px] bg-noon-blue text-sm font-bold text-white">Add to cart</button>
+
+        <div className="relative h-12 flex-1">
+          {/* Persistent pill — the blue background never fades or crossfades, only its content morphs */}
+          <div className="absolute inset-0 h-12 w-full rounded-[10px] bg-noon-blue" />
+
+          <div className="absolute inset-0 h-12 w-full overflow-hidden rounded-[10px]">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {cartCount === 0 ? (
+                <motion.button
+                  key="label"
+                  onClick={handleAdd}
+                  whileTap={{ scale: 0.93 }}
+                  className="flex h-full w-full items-center justify-center text-sm font-bold text-white"
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.25 }}
+                >
+                  Add to cart
+                </motion.button>
+              ) : (
+                <motion.div
+                  key="stepper"
+                  className="flex h-full w-full items-center justify-between px-4"
+                  variants={stepperContainer}
+                  initial="hidden"
+                  animate="show"
+                  exit="hidden"
+                >
+                  <motion.button
+                    variants={stepperItem}
+                    onClick={handleRemove}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
+                    aria-label="Remove one"
+                    className="flex h-6 w-6 items-center justify-center"
+                  >
+                    <MinusIcon size={20} color="#fff" />
+                  </motion.button>
+
+                  <motion.div variants={stepperItem} className="relative h-5 w-6 overflow-hidden">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span
+                        key={cartCount}
+                        className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white"
+                        initial={{ y: 14, opacity: 0, scale: 0.7 }}
+                        animate={{ y: 0, opacity: 1, scale: 1 }}
+                        exit={{ y: -14, opacity: 0, scale: 0.7 }}
+                        transition={{ type: "spring", duration: 0.35, bounce: 0.4 }}
+                      >
+                        {cartCount}
+                      </motion.span>
+                    </AnimatePresence>
+                  </motion.div>
+
+                  <motion.button
+                    variants={stepperItem}
+                    onClick={handleAdd}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
+                    aria-label="Add one more"
+                    className="flex h-6 w-6 items-center justify-center"
+                  >
+                    <PlusIcon size={20} color="#fff" />
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Tiny balloons pop from the button's top edge on every add */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-0">
+            <AnimatePresence>
+              {balloons.map((b) => (
+                <Balloon
+                  key={b.id}
+                  {...b}
+                  onDone={() => setBalloons((prev) => prev.filter((it) => it.id !== b.id))}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
       <div className="flex justify-center pb-2 pt-3">
         <div className="h-[5px] w-[124px] rounded-lg bg-[#0e0e0e]" />
       </div>
     </div>
+  );
+}
+
+function Balloon({ x, color, size, riseHeight, xPath, rotatePath, duration, onDone }: BalloonState & { onDone: () => void }) {
+  return (
+    <motion.div
+      className="absolute bottom-0"
+      style={{ left: `calc(50% + ${x}px)`, marginLeft: -8 * size }}
+      initial={{ y: 0, x: 0, rotate: 0, opacity: 0, scale: size * 0.5 }}
+      animate={{
+        y: -riseHeight,
+        x: xPath,
+        rotate: rotatePath,
+        opacity: [0, 1, 1, 0],
+        scale: size,
+      }}
+      transition={{
+        duration,
+        ease: EASE_OUT,
+        opacity: { duration, times: [0, 0.15, 0.65, 1] },
+        x: { duration, times: DRAFT_TIMES, ease: EASE_OUT },
+        rotate: { duration, times: DRAFT_TIMES, ease: EASE_OUT },
+      }}
+      onAnimationComplete={onDone}
+    >
+      <svg width={16 * size} height={24 * size} viewBox="0 0 16 24" fill="none">
+        <ellipse cx="8" cy="8" rx="8" ry="9.5" fill={color} />
+        <ellipse cx="5.5" cy="4.5" rx="2.2" ry="2.8" fill="white" fillOpacity="0.45" />
+        <path d="M6.5 17H9.5L8 19.5L6.5 17Z" fill={color} />
+        <line x1="8" y1="19.5" x2="8" y2="24" stroke={color} strokeWidth="0.8" opacity="0.6" />
+      </svg>
+    </motion.div>
   );
 }
 
