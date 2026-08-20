@@ -14,6 +14,12 @@ import productIphone from "../assets/figma-products/iphone.png";
 import wishlistSneaker from "../assets/figma-products/wishlist-sneaker.svg";
 import wishlistSuitcase from "../assets/figma-products/wishlist-suitcase.svg";
 import wishlistRacket from "../assets/figma-products/wishlist-racket.svg";
+import orderFridge from "../assets/order-detail/product-fridge.png";
+import orderJaguar from "../assets/order-detail/product-jaguar.png";
+import orderBottle from "../assets/order-detail/product-bottle.png";
+import orderCase from "../assets/order-detail/product-case.png";
+import orderStorage from "../assets/order-detail/product-storage.png";
+import orderPerfume from "../assets/order-detail/product-perfume.png";
 
 /* ----------------------------------------------------------------
  *  Marketplaces
@@ -271,6 +277,39 @@ function buildLifecycle(
  * ================================================================ */
 
 export const ORDERS: Order[] = [
+  /* ---------- Reference processing order — Figma 7932:61550 ---------- */
+  {
+    id: "032983823 - 1",
+    marketplace: "noon_express",
+    items: [
+      { name: "Gross 60L/Net 45L Single Door Refrigerator", image: orderFridge },
+      { name: "Classic Black EDT For Men 100ml", image: orderJaguar },
+      { name: "Milton 1.2 Litre Stainless Steel Water Bottle", image: orderBottle },
+      { name: "Spigen Rugged Armor Cover Case", image: orderCase },
+      { name: "Household Clothes Storage Bag", image: orderStorage },
+      { name: "Household Clothes Storage Bag", image: orderStorage },
+      { name: "Household Clothes Storage Bag", image: orderStorage },
+      { name: "Perfume", image: orderPerfume },
+    ],
+    status: "preparing",
+    date: "2026-04-27",
+    totalAed: "550.60",
+    eta: "Apr 29 - May 4",
+    lifecycle: buildLifecycle("noon_express", "confirmed", {
+      placed: "Apr 26",
+      confirmed: "Processing",
+      packed: "",
+      shipped: "",
+      out_for_delivery: "",
+      delivered: "Apr 29 - May 4",
+    }),
+    address: {
+      label: "Home",
+      line: "676D, Downtown, Dubai",
+    },
+    prefs: { handoff: "leave_at_door", instructions: "Get items together", contact: "call" },
+  },
+
   /* ---------- noon Express — Out for delivery (live) ---------- */
   {
     id: "NMC10293847",
@@ -456,3 +495,5 @@ export const ORDERS: Order[] = [
 export function findOrder(id: string | null): Order {
   return ORDERS.find((o) => o.id === id) || ORDERS.find((o) => o.status === "transit") || ORDERS[0];
 }
+
+export const PROCESSING_ORDER_ID = "032983823 - 1";

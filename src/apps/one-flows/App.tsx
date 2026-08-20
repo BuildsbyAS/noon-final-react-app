@@ -14,6 +14,7 @@ import SavedCardsPage from "./components/SavedCardsPage";
 import MyAccountPage from "./components/MyAccountPage";
 import MyOrdersPage from "./components/MyOrdersPage";
 import TrackOrderPage from "./components/TrackOrderPage";
+import ProcessingOrderDetailsPage, { ProcessingOrderDetailsSkeleton } from "./components/ProcessingOrderDetailsPage";
 import ReviewsRootFlow from "./reviews/RootFlow";
 import CancelMembership from "./components/CancelMembership";
 import CancelFeedback from "./components/CancelFeedback";
@@ -33,6 +34,7 @@ import {
   PaymentMethodSkeleton,
 } from "./components/Skeleton";
 import { Retune } from "retune";
+import { PROCESSING_ORDER_ID } from "./data/orders";
 
 type Screen =
   | "home"
@@ -233,7 +235,7 @@ export default function App() {
             onAddresses={() => navigate("accountAddresses", "forward")}
             onSavedCards={() => navigate("accountCards", "forward")}
             onMyAccount={() => navigate("myAccount", "forward")}
-            onMyOrders={() => navigate("myOrdersReviews", "forward")}
+            onMyOrders={() => navigate("myOrders", "forward")}
             onSignedOut={() => navigate("home", "back")}
           />
         );
@@ -255,6 +257,13 @@ export default function App() {
           <ReviewsRootFlow onExit={() => navigate("accounts", "back")} />
         );
       case "trackOrder":
+        if (activeOrderId === PROCESSING_ORDER_ID) {
+          return (
+            <SkeletonGate skeleton={<ProcessingOrderDetailsSkeleton />}>
+              <ProcessingOrderDetailsPage onBack={() => navigate("myOrders", "back")} />
+            </SkeletonGate>
+          );
+        }
         return (
           <TrackOrderPage
             orderId={activeOrderId}
