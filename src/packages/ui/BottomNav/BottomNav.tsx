@@ -4,9 +4,10 @@ import {
   HomeDefault, HomeSelected,
   CategoriesDefault, CategoriesSelected,
   DealsDefault, DealsSelected,
-  ProfileDefault, ProfileSelected,
+  ProfileDefault, ProfileSelected, ProfileBirthday,
   CartDefault, CartSelected,
 } from './BottomNavIcons';
+import { useBirthdayStore } from '@state/birthdayStore';
 import './BottomNav.css';
 
 const HIDE_AFTER_PX = 24;
@@ -25,14 +26,19 @@ const COLOR_ACTIVE = 'var(--color-text-action, #0f61ff)';
 const COLOR_DEFAULT = 'var(--color-text-tertiary, #666d85)';
 
 function TabIcon({ id, active }: { id: Tab; active: boolean }) {
-  const Selected = {
+  const birthdayMode = useBirthdayStore((s) => s.birthdayMode);
+  // In birthday mode the avatar wears a party hat in both states, so the hat
+  // is visible from any tab — not just while Profile is selected.
+  const birthdayProfile = birthdayMode && id === 'profile';
+
+  const Selected = birthdayProfile ? ProfileBirthday : {
     home: HomeSelected,
     categories: CategoriesSelected,
     deals: DealsSelected,
     profile: ProfileSelected,
     cart: CartSelected,
   }[id];
-  const Default = {
+  const Default = birthdayProfile ? ProfileBirthday : {
     home: HomeDefault,
     categories: CategoriesDefault,
     deals: DealsDefault,

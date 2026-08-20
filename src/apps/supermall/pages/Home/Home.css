@@ -43,13 +43,11 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: url('/header-bg.png') center / cover no-repeat;
+  height: 369px;
+  flex-shrink: 0;
+  background: url('/header-bg.png') center / 100% 100% no-repeat;
   padding: 0 0 var(--space-14);
-  display: flex;
-  flex-direction: column;
-  /* gap replaced with margin-top on children so the address row's gap can
-     collapse with its height when the morph compacts the header. */
-  gap: 0;
+  display: block;
   border-radius: 0 0 var(--radius-12) var(--radius-12);
   scroll-snap-align: start;
   /* `scroll-snap-stop: always` forces the snap to halt on the header even
@@ -69,6 +67,7 @@
 
 /* ── Service tiles — 76 × 76 rounded-20 ──────────────────────────────── */
 .home-header__tiles {
+  position: relative;
   display: flex;
   gap: var(--space-6);
   overflow-x: auto;
@@ -173,6 +172,7 @@
 
 /* ── Address row — two-line stacked, heart right-aligned ──────────────── */
 .home-header__address {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -263,6 +263,7 @@
 
 /* ── Search bar ──────────────────────────────────────────────────────── */
 .home-header__search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-8);

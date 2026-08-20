@@ -1,0 +1,243 @@
+/* =============================================================================
+   BDAY mode toggle — Figma 719:26384 (off) / 719:26387 (on)
+   Handle sits right when off, slides left and gains the gift glyph when on.
+   ========================================================================== */
+/* Off (Figma 719:26384) — handle rests on the left. DOM order is
+   [handle, label]; the on state reverses it and the layout animation
+   carries the handle across. */
+.bday-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 6px;
+  height: 32px;
+  padding: 4px 10px 4px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 40px;
+  background: #ffe7db;
+  cursor: pointer;
+  transition: background 320ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* On (Figma 719:26387) — handle slides right and picks up the gift. */
+.bday-toggle.is-on {
+  flex-direction: row-reverse;
+  gap: 1px;
+  width: 77px;
+  padding: 4px 3px;
+  border-color: #ffefef;
+  background: linear-gradient(180deg, #ff4516 13.589%, #ffd8ab 193.3%);
+}
+
+.bday-toggle:active {
+  transform: scale(0.96);
+}
+
+/* The real control, stretched over the pill and kept transparent. It must stay
+   a rendered native switch (not display:none / appearance:none) for iOS to
+   fire its system haptic on tap. */
+.bday-toggle__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  z-index: 3;
+  cursor: pointer;
+}
+
+.bday-toggle__handle,
+.bday-toggle__label {
+  pointer-events: none;
+}
+
+.bday-toggle__handle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #fff;
+  border-radius: 23px;
+  background: radial-gradient(ellipse at 41% 40%, #ffebdf 0%, #ffffff 100%);
+}
+
+.bday-toggle__gift {
+  width: 13.73px;
+  height: 13.13px;
+  display: block;
+}
+
+.bday-toggle__label {
+  flex-shrink: 0;
+  width: 32px;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 12px;
+  letter-spacing: -0.1px;
+  text-align: left;
+  color: #1d2539;
+  transition: color 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.bday-toggle.is-on .bday-toggle__label {
+  width: 39px;
+  font-weight: 700;
+  line-height: 12px;
+  color: #fff;
+}
+
+/* =============================================================================
+   Countdown — Figma 704:13255
+   ========================================================================== */
+/* Off state (Figma 704:13255) — a glass chip on the birthday-month header. */
+.bday-countdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Hug the digits instead of stretching to the headline's width. */
+  align-self: flex-start;
+  gap: 16px;
+  padding: 6px 8px;
+  border: 0.889px solid rgba(255, 255, 255, 0.64);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.24);
+  white-space: nowrap;
+  transition: background 320ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* On state (Figma 719:32191) — solid gradient chip with a lifted edge. */
+.home-header.is-birthday .bday-countdown {
+  border-color: #fff;
+  background: linear-gradient(180deg, #fff 22.074%, #ff9c75 155.54%);
+  filter: drop-shadow(0 1px 0 rgba(189, 86, 53, 0.6));
+}
+
+.bday-countdown__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hairline rules between cells — on state only (Figma 704:21027-29). */
+.home-header.is-birthday .bday-countdown__cell + .bday-countdown__cell::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: -6px;
+  bottom: -6px;
+  width: 0.6px;
+  background: #e02f02;
+  opacity: 0.2;
+  mix-blend-mode: multiply;
+}
+
+.bday-countdown__value {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: -0.15px;
+  color: #000;
+  font-variant-numeric: tabular-nums;
+}
+
+.bday-countdown__value > span {
+  display: block;
+}
+
+.bday-countdown__label {
+  font-family: var(--font-primary);
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: -0.1px;
+  color: #c77347;
+}
+
+.home-header.is-birthday .bday-countdown__label {
+  color: #b64724;
+  opacity: 0.9;
+}
+
+/* =============================================================================
+   Birthday header treatment — Figma 704:13226
+   ========================================================================== */
+.home-header__bday {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+.home-header__bday-left {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  /* Keeps the countdown clear of the header's bottom edge in both states. */
+  padding-bottom: 8px;
+}
+
+.home-header__bday-title {
+  width: 172px;
+  margin: 0;
+  font-family: var(--font-primary);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 22px;
+  letter-spacing: -0.15px;
+  opacity: 0.9;
+  background: linear-gradient(90deg, #82220c 23.374%, #cb491a 56.832%, #82220c 140.18%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The gift/cake still-life anchors the bottom-right of the band. */
+.home-header__bday-art {
+  position: absolute;
+  right: 6px;
+  bottom: 0;
+  /* Sized so the candle still reads at this scale. */
+  width: 132px;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The toggle floats above the art, aligned with the headline row. */
+.home-header__bday-toggle {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+/* ── Birthday skin on the header band ───────────────────────────────────── */
+.home-header.is-birthday {
+  background: url('/header-bg-birthday.png') center / 100% 100% no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bday-toggle,
+  .bday-toggle__label {
+    transition: none;
+  }
+}
