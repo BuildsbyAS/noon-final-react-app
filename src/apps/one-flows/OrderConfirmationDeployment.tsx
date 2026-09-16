@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import SmoothCorners from '@ui/SmoothCorners'
+import { Retune } from 'retune'
 import OrderConfirmationPage, {
   OrderConfirmationSkeleton,
   VariantSwitch,
@@ -36,6 +37,7 @@ export default function OrderConfirmationDeployment() {
         </div>
       </SmoothCorners>
       <VariantSwitch value={variant} onChange={switchVariant} />
+      {import.meta.env.DEV && <Retune port={9225} position="top-right" />}
     </div>
   )
 }
