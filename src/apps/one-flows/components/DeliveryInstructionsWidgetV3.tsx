@@ -144,8 +144,13 @@ function Segment({
       }}
       whileTap={reduceMotion ? undefined : { scale: 0.96 }}
       className={`
-        relative flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full cursor-pointer
-        ${stacked ? "w-full px-4" : on ? "px-4" : "px-2.5"}
+        relative flex h-8 shrink-0 items-center gap-1.5 rounded-full cursor-pointer
+        ${
+          // Stacked rows are a left-aligned list — Figma puts every icon at x=16
+          // and every label at x=40, so centring makes the icons wander row to
+          // row. The inline pills genuinely are centred (symmetric padding).
+          stacked ? "w-full justify-start px-4" : `justify-center ${on ? "px-4" : "px-2.5"}`
+        }
         ${FOCUS_RING}
       `}
     >
