@@ -449,7 +449,10 @@ export default function DeliveryInstructionsWidgetV1({
     // longer phrase can wrap a row, and a fixed height would clip it against
     // the card's rounded overflow. shrink-0 keeps the page's flex column from
     // compressing it back.
-    <div ref={rootRef} className={`relative w-[351px] shrink-0 ${className}`}>
+    <div
+      ref={rootRef}
+      className={`relative h-auto w-[351px] shrink-0 rounded-16 border-4 border-solid border-white ${className}`}
+    >
       {/* The rounded clip sits here, inside the popover's positioning root, so
           the gradient header stays cropped while the popover can still escape. */}
       <section
@@ -457,18 +460,18 @@ export default function DeliveryInstructionsWidgetV1({
         aria-labelledby={titleId}
         data-variant="1"
         className="
-          w-full bg-white rounded-16 overflow-hidden flex flex-col
+          w-full bg-white overflow-hidden flex flex-col
           shadow-[inset_0_0_0_3px_#ffffff]
         "
       >
-        <div className="shrink-0 h-[42px] px-4 pt-3 pb-2.5 bg-gradient-to-r from-[#d6e9ff] to-white">
+        <div className="shrink-0 h-[42px] rounded-t-[var(--radius-14)] px-4 pt-3 pb-2.5 bg-gradient-to-r from-[#d6e9ff] to-white">
           <h2 id={titleId} className="text-[16px] leading-5 tracking-[-0.15px] font-bold" style={{ color: INK_PRIMARY }}>
             A message from your rider
           </h2>
         </div>
 
         <div className="flex-1 p-3">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             {RIDER_SLOTS.map((slot) => {
               const option = optionFor(slot, value);
               const active = open === slot.id;
