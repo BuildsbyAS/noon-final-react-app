@@ -218,7 +218,7 @@ function InstagramIcon({ className="" }: { className?: string }) {
 function FlagUAE({ className="" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 16" className={`block ${className} rounded-[3px] overflow-hidden`} aria-hidden="true">
-      <rect x="6" y="0" width="18" height="16/3" height="5.33" fill="#00732F" />
+      <rect x="6" y="0" width="18" height="5.33" fill="#00732F" />
       <rect x="6" y="5.33" width="18" height="5.34" fill="#FFFFFF" />
       <rect x="6" y="10.67" width="18" height="5.33" fill="#000000" />
       <rect x="0" y="0" width="6" height="16" fill="#C8102E" />

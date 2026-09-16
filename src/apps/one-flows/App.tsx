@@ -15,6 +15,7 @@ import MyAccountPage from "./components/MyAccountPage";
 import MyOrdersPage from "./components/MyOrdersPage";
 import TrackOrderPage from "./components/TrackOrderPage";
 import ProcessingOrderDetailsPage, { ProcessingOrderDetailsSkeleton } from "./components/ProcessingOrderDetailsPage";
+import OrderConfirmationPage, { OrderConfirmationSkeleton, VariantSwitch, parseWidgetVariant, type WidgetVariant } from "./components/OrderConfirmationPage";
 import ReviewsRootFlow from "./reviews/RootFlow";
 import CancelMembership from "./components/CancelMembership";
 import CancelFeedback from "./components/CancelFeedback";
@@ -55,7 +56,8 @@ type Screen =
   | "cancelFeedback"
   | "cancelled"
   | "postCancel"
-  | "paymentMethod";
+  | "paymentMethod"
+  | "orderConfirmation";
 
 type Direction = "forward" | "back";
 
@@ -78,6 +80,21 @@ const isEmbedded =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("embedded") === "1";
 
+// Deep link for screens that have no in-app entry point yet, so a prototype can
+// be opened straight onto one: /one-flows?screen=orderConfirmation
+const initialScreen: Screen =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("screen") === "orderConfirmation"
+    ? "orderConfirmation"
+    : "accounts";
+
+// Which motion iteration of the delivery-instructions widget to open on:
+// /one-flows?screen=orderConfirmation&v=2 (or v=3, v=4)
+const initialWidgetVariant: WidgetVariant =
+  typeof window !== "undefined"
+    ? parseWidgetVariant(new URLSearchParams(window.location.search).get("v"))
+    : 1;
+
 export default function App() {
   // Splash no longer plays on initial load. The user lands on AccountsPage
   // first (the entry point from supermall's Account tab). Tapping the
@@ -85,7 +102,8 @@ export default function App() {
   // subscribed Home screen — i.e. the splash is the "joining noon One"
   // moment, not an app-startup animation.
   const [showSplash, setShowSplash] = useState(false);
-  const [screen, setScreen] = useState<Screen>("accounts");
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [widgetVariant, setWidgetVariant] = useState<WidgetVariant>(initialWidgetVariant);
   const [shareTier, setShareTier] = useState<"duo" | "family">("family");
   const [direction, setDirection] = useState<Direction>("forward");
   // The user's current plan. Starts as "monthly"; bumps when they confirm an
@@ -270,6 +288,16 @@ export default function App() {
             onBack={() => navigate("myOrders", "back")}
           />
         );
+      case "orderConfirmation":
+        return (
+          <SkeletonGate skeleton={<OrderConfirmationSkeleton variant={widgetVariant} />}>
+            <OrderConfirmationPage
+              onBack={() => navigate("accounts", "back")}
+              onContinueShopping={() => navigate("accounts", "back")}
+              variant={widgetVariant}
+            />
+          </SkeletonGate>
+        );
       case "accountAddresses":
         return <AddressBookPage onBack={() => navigate("accounts", "back")} />;
       case "accountCards":
@@ -336,7 +364,7 @@ export default function App() {
   // SmoothCorners squircle clip stays so the inner content respects the
   // rounded edges, but the outer wrapper just centres it edge-to-edge.
   return (
-    <div className="w-full flex justify-center">
+    <div className="w-full flex flex-col items-center gap-4">
       <SmoothCorners radius={20}>
         {showSplash ? (
           <SplashScreen onDone={() => setShowSplash(false)} />
@@ -359,6 +387,18 @@ export default function App() {
           </div>
         )}
       </SmoothCorners>
+      {screen === "orderConfirmation" && !showSplash && (
+        <VariantSwitch
+          value={widgetVariant}
+          onChange={(next) => {
+            setWidgetVariant(next);
+            const url = new URL(window.location.href);
+            if (next === 1) url.searchParams.delete("v");
+            else url.searchParams.set("v", String(next));
+            window.history.replaceState(window.history.state, "", url);
+          }}
+        />
+      )}
       {import.meta.env.DEV && <Retune port={9225} />}
     </div>
   );
