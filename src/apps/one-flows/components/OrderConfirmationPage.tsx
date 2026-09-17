@@ -24,6 +24,9 @@ import DeliveryInstructionsWidgetV2 from "./DeliveryInstructionsWidgetV2";
 import DeliveryInstructionsWidgetV3 from "./DeliveryInstructionsWidgetV3";
 import DeliveryInstructionsWidgetV4 from "./DeliveryInstructionsWidgetV4";
 import DeliveryInstructionsWidgetV5 from "./DeliveryInstructionsWidgetV5";
+import DeliveryInstructionsWidgetV6 from "./DeliveryInstructionsWidgetV6";
+import DeliveryInstructionsWidgetV7 from "./DeliveryInstructionsWidgetV7";
+import DeliveryInstructionsWidgetV8 from "./DeliveryInstructionsWidgetV8";
 import type { InstructionId } from "./deliveryInstructions.model";
 import {
   DEFAULT_DELIVERY_PREFERENCES,
@@ -31,6 +34,12 @@ import {
 } from "./deliveryPreferences.model";
 import { DEFAULT_RIDER_CHOICES, type RiderChoices } from "./riderMessage.model";
 import { DEFAULT_CAROUSEL_CHOICES, type CarouselChoices } from "./deliveryCarousel.model";
+import { DEFAULT_PARTNER_CHOICES, type PartnerChoices } from "./deliveryPartner.model";
+import {
+  DEFAULT_PARTNER_CHOICES as DEFAULT_PARTNER_V7_CHOICES,
+  type PartnerChoices as PartnerV7Choices,
+} from "./deliveryPartnerV7.model";
+import { DEFAULT_V8_VALUE, type V8Value } from "./deliveryInstructionsV8.model";
 import headerImg from "../assets/order-confirmation/header.png";
 import orderPlacedImg from "../assets/order-confirmation/order-placed.png";
 import deliveryInfoImg from "../assets/order-confirmation/delivery-info.png";
@@ -54,13 +63,16 @@ const PAGE_BG = "#f2f3f7";
  * v3 and v5 were swapped on request — the carousel took the v3 pill and the
  * chip card moved to v5, so a `?v=3` link now opens the carousel.
  */
-export type WidgetVariant = 1 | 2 | 3 | 4 | 5;
+export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 const VARIANTS: { id: WidgetVariant; label: string }[] = [
   { id: 1, label: "v1" },
   { id: 2, label: "v2" },
   { id: 3, label: "v3" },
   { id: 4, label: "v4" },
   { id: 5, label: "v5" },
+  { id: 6, label: "v6" },
+  { id: 7, label: "v7" },
+  { id: 8, label: "v8" },
 ];
 
 export function parseWidgetVariant(raw: string | null): WidgetVariant {
@@ -113,6 +125,10 @@ export default function OrderConfirmationPage({
   const [riderChoices, setRiderChoices] = useState<RiderChoices>(DEFAULT_RIDER_CHOICES);
   const [preferences, setPreferences] = useState<DeliveryPreferences>(DEFAULT_DELIVERY_PREFERENCES);
   const [carouselChoices, setCarouselChoices] = useState<CarouselChoices>(DEFAULT_CAROUSEL_CHOICES);
+  // v6 is based on v1 but owns its own model and answers.
+  const [partnerChoices, setPartnerChoices] = useState<PartnerChoices>(DEFAULT_PARTNER_CHOICES);
+  const [partnerV7Choices, setPartnerV7Choices] = useState<PartnerV7Choices>(DEFAULT_PARTNER_V7_CHOICES);
+  const [v8Value, setV8Value] = useState<V8Value>(DEFAULT_V8_VALUE);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const ChipWidget = variant === 4 || variant === 5 ? CHIP_WIDGET[variant] : null;
@@ -185,6 +201,20 @@ export default function OrderConfirmationPage({
           <DeliveryInstructionsWidgetV2 value={preferences} onChange={setPreferences} />
         ) : variant === 3 ? (
           <DeliveryInstructionsWidgetV3 value={carouselChoices} onChange={setCarouselChoices} />
+        ) : variant === 6 ? (
+          <DeliveryInstructionsWidgetV6
+            value={partnerChoices}
+            onChange={setPartnerChoices}
+            onSheetOpenChange={setSheetOpen}
+          />
+        ) : variant === 7 ? (
+          <DeliveryInstructionsWidgetV7
+            value={partnerV7Choices}
+            onChange={setPartnerV7Choices}
+            onSheetOpenChange={setSheetOpen}
+          />
+        ) : variant === 8 ? (
+          <DeliveryInstructionsWidgetV8 value={v8Value} onChange={setV8Value} />
         ) : (
           <DeliveryInstructionsWidgetV1
             value={riderChoices}
@@ -237,6 +267,9 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
   // (segmented cards + save row), v3 is the 214-tall carousel.
   const v2 = variant === 2;
   const carousel = variant === 3;
+  // v7 is v6's layout with an interactive partner, so they share a silhouette.
+  const partner = variant === 6 || variant === 7;
+  const v8 = variant === 8;
   return (
     <div
       className="relative w-[375px] h-[812px] overflow-hidden"
@@ -259,7 +292,7 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
 
       <div
         className="absolute left-3 top-[471px] w-[351px] rounded-16 bg-white overflow-hidden"
-        style={{ height: v2 ? 232 : carousel ? 214 : 160 }}
+        style={{ height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : 160 }}
       >
         <div className="absolute left-4 top-[15px]">
           <Skel className="h-4 w-[132px] rounded-4" />
@@ -302,6 +335,51 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
               <Skel className="size-5 rounded-4" />
             </div>
             <div className="absolute left-10 top-[182px]">
+              <Skel className="h-5 w-[240px] rounded-4" />
+            </div>
+          </>
+        ) : v8 ? (
+          <>
+            {/* v8: three 136×114 switch cards at x 12 / 158 / 304 (the third clips),
+                the record row at y 174, the save row at 230. */}
+            {[12, 158, 304].map((left) => (
+              <div key={left} className="absolute top-12" style={{ left }}>
+                <Skel className="w-[136px] h-[114px] rounded-16" />
+              </div>
+            ))}
+            <div className="absolute left-3 top-[174px]">
+              <Skel className="w-[327px] h-11 rounded-12" />
+            </div>
+            <div className="absolute left-[14px] top-[230px]">
+              <Skel className="size-5 rounded-4" />
+            </div>
+            <div className="absolute left-10 top-[230px]">
+              <Skel className="h-5 w-[240px] rounded-4" />
+            </div>
+          </>
+        ) : partner ? (
+          <>
+            {/* v6: three chips at y 48 / 88 / 128 (widths 100 / 106 / 195), the
+                rider at (237, 20), the record row at y 174, the save row at 231. */}
+            {[
+              [48, 100],
+              [88, 106],
+              [128, 195],
+            ].map(([top, width]) => (
+              <div key={top} className="absolute left-3" style={{ top }}>
+                <Skel className="h-8 rounded-full" style={{ width }} />
+              </div>
+            ))}
+            <div className="absolute left-[237px] top-5">
+              <Skel className="w-[114px] h-[150px] rounded-16" />
+            </div>
+            <div className="absolute left-3 top-[174px]">
+              <Skel className="w-[327px] h-10 rounded-12" />
+            </div>
+            <div className="absolute left-[14px] top-[231px]">
+              <Skel className="size-5 rounded-4" />
+            </div>
+            <div className="absolute left-10 top-[231px]">
               <Skel className="h-5 w-[240px] rounded-4" />
             </div>
           </>
