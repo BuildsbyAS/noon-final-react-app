@@ -1,23 +1,26 @@
 /**
- * Glyphs for v8 "Give delivery instructions".
+ * Glyphs for v10 "Give delivery instructions", and the signature motion each
+ * plays when its answer is picked.
  *
- * Geometry is verbatim from v8's Figma exports (../assets/delivery-instructions-v8),
- * each in its own viewBox. The voice-note glyphs are copied from v2
- * (deliveryPreferenceGlyphs) and owned here — v8 imports nothing from v2.
+ * Geometry is verbatim from v10's Figma exports (../assets/delivery-instructions-v10),
+ * each in its own viewBox. The signatures and the voice-note glyphs are v2's
+ * (deliveryPreferenceGlyphs), copied and owned here — v10 imports nothing from
+ * v2 or v8.
  *
  * Every option glyph is rendered twice and crossfaded — muted ink on the card,
  * primary ink on the white thumb — because plain `fill` attributes can't tween,
  * and call-off knocks a stroke out of whatever surface sits behind it.
  */
-import { motion } from "framer-motion";
-import type { V8GlyphId } from "./deliveryInstructionsV8.model";
+import { useEffect } from "react";
+import { motion, useAnimationControls, type TargetAndTransition } from "framer-motion";
+import type { V10GlyphId } from "./deliveryInstructionsV10.model";
 
 export const INK_PRIMARY = "#1d2539";
 /** Figma's unselected glyph ink. */
 export const INK_MUTED = "#989fb3";
 export const INK_ACTION = "#0f61ff";
 export const SURFACE_THUMB = "#ffffff";
-/** What sits behind an unselected glyph — the card's gradient, near its middle. */
+/** What sits behind an unselected glyph — the switch track. */
 export const SURFACE_CARD = "#f2f3f7";
 
 const FADE = { duration: 0.16, ease: "easeOut" as const };
@@ -29,7 +32,7 @@ const FADE = { duration: 0.16, ease: "easeOut" as const };
 type Parts = { ink: string; knockout: string };
 type GlyphDef = { viewBox: string; draw: (p: Parts) => React.ReactElement };
 
-const GLYPH: Record<V8GlyphId, GlyphDef> = {
+const GLYPH: Record<V10GlyphId, GlyphDef> = {
   call: {
     viewBox: "0 0 18 18",
     draw: ({ ink }) => (
@@ -72,16 +75,16 @@ const GLYPH: Record<V8GlyphId, GlyphDef> = {
     ),
   },
 
-  user: {
+  hand: {
     viewBox: "0 0 20 20",
     draw: ({ ink }) => (
       <>
         <path
-          d="M9.97412 4.76558C8.48037 4.76558 7.26579 5.98017 7.26579 7.47392C7.26579 8.96767 8.48037 10.1823 9.97412 10.1823C11.4679 10.1823 12.6825 8.96767 12.6825 7.47392C12.6825 5.98017 11.4679 4.76558 9.97412 4.76558Z"
+          d="M17.8135 11.25C17.8135 11.0771 17.674 10.9375 17.501 10.9375H16.3521C16.1021 10.9375 15.8667 10.8396 15.6896 10.6625L14.776 9.74896C13.9302 8.90312 12.8052 8.4375 11.6083 8.4375H9.58438C8.95208 8.4375 8.43854 8.95104 8.43854 9.58333C8.43854 10.2156 8.95208 10.7292 9.58438 10.7292H10.4177C10.9344 10.7292 11.3552 11.15 11.3552 11.6667C11.3552 12.1833 10.9344 12.6042 10.4177 12.6042H9.03958C8.44375 12.6042 7.84792 12.4635 7.31562 12.1969L4.09479 10.5865C3.78021 10.4292 3.42292 10.4031 3.08958 10.5146C2.75625 10.626 2.48542 10.8604 2.32813 11.175C2.03646 11.7583 2.21042 12.4573 2.74063 12.8365L5.91875 15.1073C7.25208 16.0594 8.82188 16.5625 10.4594 16.5625H17.501C17.5844 16.5625 17.6635 16.5292 17.7219 16.4708C17.7802 16.4125 17.8135 16.3323 17.8135 16.25V11.25Z"
           fill={ink}
         />
         <path
-          d="M17.5012 5.15829C17.3231 3.7385 16.2075 2.62288 14.7877 2.44475C11.5939 2.04579 8.35329 2.04579 5.1585 2.44579C3.7387 2.62288 2.62308 3.7385 2.446 5.15829C2.04704 8.35308 2.04704 11.5927 2.446 14.7875C2.62308 16.2073 3.73975 17.3229 5.15954 17.501C6.75641 17.701 8.36579 17.801 9.97412 17.801C11.5825 17.801 13.1918 17.701 14.7887 17.501C16.2085 17.3239 17.3241 16.2083 17.5022 14.7875C17.9012 11.5927 17.9012 8.35308 17.5022 5.15829H17.5012ZM16.2616 14.6333C16.1606 15.4406 15.5543 16.0833 14.7658 16.2395V15.8104C14.7658 13.1687 12.6158 11.0187 9.97412 11.0187C7.33245 11.0187 5.18245 13.1687 5.18245 15.8104V16.2395C4.39391 16.0833 3.78766 15.4416 3.68662 14.6333C3.30016 11.5416 3.30016 8.40621 3.68662 5.3135C3.79287 4.46142 4.46266 3.79163 5.31475 3.68538C8.40641 3.29892 11.5418 3.29892 14.6345 3.68538C15.4866 3.79163 16.1564 4.46142 16.2627 5.3135C16.6491 8.40517 16.6491 11.5406 16.2627 14.6333H16.2616Z"
+          d="M6.25104 8.22917C7.57187 8.22917 8.64688 7.15417 8.64688 5.83333C8.64688 4.5125 7.57292 3.4375 6.25104 3.4375C4.92917 3.4375 3.85521 4.5125 3.85521 5.83333C3.85521 7.15417 4.93021 8.22917 6.25104 8.22917Z"
           fill={ink}
         />
       </>
@@ -137,7 +140,7 @@ const GLYPH: Record<V8GlyphId, GlyphDef> = {
   },
 };
 
-function RawGlyph({ glyph, size, ink, knockout }: { glyph: V8GlyphId; size: number } & Parts) {
+function RawGlyph({ glyph, size, ink, knockout }: { glyph: V10GlyphId; size: number } & Parts) {
   const def = GLYPH[glyph];
   return (
     <svg width={size} height={size} viewBox={def.viewBox} fill="none" aria-hidden="true" focusable="false" className="block shrink-0">
@@ -147,23 +150,87 @@ function RawGlyph({ glyph, size, ink, knockout }: { glyph: V8GlyphId; size: numb
 }
 
 /* ================================================================
- *  Option glyph
+ *  Option glyph — with v2's signature motion
  * ================================================================ */
 
-/** Crossfades between muted and primary ink as its option is (de)selected. */
+type Signature = { origin: string; from: TargetAndTransition; to: TargetAndTransition };
+const REST = { rotate: 0, scale: 1, y: 0, rotateY: 0 };
+
+/**
+ * A verb that animates like itself is legible before you've read the caption.
+ * Each signature is one transform about its own origin — the hinge, the crown,
+ * the wrist — and the origins are the point.
+ */
+const SIGNATURE: Record<V10GlyphId, Signature> = {
+  // Receiving: the palm rises to meet the parcel and settles.
+  hand: {
+    origin: "50% 100%",
+    from: REST,
+    to: { y: [4, -2.5, 0], scale: [0.94, 1.04, 1], transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } },
+  },
+  // Opening: a real 3D swing about the hinge on the left edge.
+  door: {
+    origin: "16% 50%",
+    from: REST,
+    to: { rotateY: [0, -52, 0], transition: { duration: 0.58, ease: [0.34, 1.2, 0.36, 1] } },
+  },
+  // Ringing: a decaying shake about the earpiece.
+  call: {
+    origin: "50% 72%",
+    from: REST,
+    to: { rotate: [0, -13, 11, -7, 4, 0], transition: { duration: 0.52, ease: "easeOut", times: [0, 0.14, 0.32, 0.5, 0.72, 1] } },
+  },
+  // Silenced: one dip, cut short. The opposite of a ring.
+  callOff: {
+    origin: "50% 72%",
+    from: REST,
+    to: { rotate: [0, -7, 0], scale: [1, 0.84, 1], transition: { duration: 0.3, ease: "easeOut" } },
+  },
+  // Rung: swings from its crown, longer decay than the phone — it's heavier.
+  bell: {
+    origin: "50% 16%",
+    from: REST,
+    to: { rotate: [0, -17, 14, -9, 5, 0], transition: { duration: 0.56, ease: "easeOut", times: [0, 0.13, 0.31, 0.5, 0.72, 1] } },
+  },
+  // Muted: one clank that damps to nothing immediately.
+  bellOff: {
+    origin: "50% 16%",
+    from: REST,
+    to: { rotate: [0, -9, 4, 0], scale: [1, 0.86, 1], transition: { duration: 0.32, ease: "easeOut" } },
+  },
+};
+
 export function OptionGlyph({
   glyph,
   size,
   selected,
+  playKey,
   reduceMotion,
 }: {
-  glyph: V8GlyphId;
+  glyph: V10GlyphId;
   size: number;
   selected: boolean;
+  /** Bumped on every tap, including a tap on the already-selected answer. */
+  playKey: number;
   reduceMotion: boolean;
 }) {
+  const controls = useAnimationControls();
+  const sig = SIGNATURE[glyph];
+
+  useEffect(() => {
+    if (playKey === 0 || reduceMotion) return;
+    // set-then-start: a keyframe array has to replay from a known pose.
+    controls.set(sig.from);
+    void controls.start(sig.to);
+  }, [playKey, reduceMotion, controls, sig]);
+
   return (
-    <span aria-hidden="true" className="relative block shrink-0" style={{ width: size, height: size }}>
+    <motion.span
+      aria-hidden="true"
+      className="relative block shrink-0"
+      style={{ width: size, height: size, transformOrigin: sig.origin, transformPerspective: 150 }}
+      animate={controls}
+    >
       <motion.span
         className="absolute inset-0 block"
         initial={false}
@@ -180,7 +247,7 @@ export function OptionGlyph({
       >
         <RawGlyph glyph={glyph} size={size} ink={INK_PRIMARY} knockout={SURFACE_THUMB} />
       </motion.span>
-    </span>
+    </motion.span>
   );
 }
 

@@ -6,29 +6,20 @@
  * is always answered. The third card overflows the frame, which says "scroll".
  * Below: a record row and the save preference.
  *
- * v2's interaction language, copied (v8 imports nothing from v2). On a tap:
- *
- *  1. The white thumb flies to the picked option on a spring and STRETCHES
- *     along the way. The stretch is derived from the thumb's own velocity
- *     (`useVelocity` → `useTransform` → a smoothing spring), so it reads as a
- *     physical object, not a keyframe.
- *  2. The glyph plays its signature: the phone shakes about its earpiece, the
- *     bell swings from its crown, the door swings open in 3D about its hinge,
- *     the person lifts to receive.
- *  3. Options that stand for a SOUND ("Call Anurag", "Ring doorbell") send a
- *     sonar ripple — a pressure wave and two rings — out from the thumb,
- *     clipped to the card.
- *  4. The label's weight and ink crossfade between selected and not.
- *
- * Tapping the option that's already on replays 2 and 3 without changing
- * anything, so the control never feels dead.
+ * ON TOGGLE — v4's showcase: the card's short illustration clip plays
+ * full-bleed over the whole card (a play() inside the tap, for iOS). The answer
+ * changes at once for assistive tech, but the visible selection waits for the
+ * clip: when it ends it dissolves and the white thumb springs to the new option,
+ * stretching with its own velocity (v2's thumb, copied). Re-tapping replays the
+ * clip. Each option has its own clip (see OPTION_CLIP).
  *
  * The record row walks idle → recording → recorded ⇄ playing, plus Remove:
  * pulse rings while it listens, a live level meter in the disc, a progress ring
- * while it plays, and the caption re-reads itself through TextMorph.
+ * while it plays, and the caption re-reads itself through TextMorph (all v2's,
+ * copied — v8 imports nothing from v2 or v4).
  *
- * Reduced motion: the thumb jumps, no stretch, sonar, pulses or signatures;
- * colours and captions swap.
+ * Reduced motion: no clips, no stretch, no pulses; the thumb jumps and colours
+ * and captions swap.
  *
  * No <PageTransition> / <SkeletonGate> — this is a widget; OrderConfirmationPage
  * owns both for the screen.
@@ -46,6 +37,12 @@ import {
 import { hapticTick } from "@ui";
 import { InstructionCheckbox } from "./MCheckbox";
 import TextMorph from "./deliveryInstructionsV8TextMorph";
+import avoidCallingClip from "../assets/order-confirmation/avoid-calling.mp4";
+import leaveAtDoorClip from "../assets/order-confirmation/leave-at-door.mp4";
+import dontRingTheBellClip from "../assets/order-confirmation/dont-ring-the-bell.mp4";
+import callMeClip from "../assets/delivery-instructions-v8/call-me.mp4";
+import ringBellClip from "../assets/delivery-instructions-v8/ring-bell.mp4";
+import giveItemsClip from "../assets/delivery-instructions-v8/give-items-to-me.mp4";
 import {
   CrossGlyph,
   DISC_IN_BOX,
@@ -78,8 +75,6 @@ const INK_SECONDARY = "#475067";
 const INK_TERTIARY = "#666d85";
 const SURFACE_ROW = "#f9f9fb";
 
-const EASE_OUT_EXPO = [0.22, 1, 0.36, 1] as const;
-
 /** A horizontal drag on the scrolling row must not read as a tap. */
 const DRAG_SLOP_PX = 8;
 
@@ -96,46 +91,22 @@ const FULL_STRETCH_V = 380;
 const FOCUS_RING =
   "outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:-2px]";
 
+/** Two pulse rings, the second a beat behind — used by the record row. */
+const SONAR_DELAYS = [0, 0.09];
+
 /* ================================================================
- *  Sonar — sound leaving the thumb, clipped to the card
+ *  Clips — v4's showcase illustrations
  * ================================================================ */
 
-/** Two rings, the second a beat behind, so it reads as a pulse not a blip. */
-const SONAR_DELAYS = [0, 0.09];
-const SONAR_D = 30;
+/** The clip each option plays when picked. */
+const OPTION_CLIP: Record<V8CardId, Record<string, string>> = {
+  call: { call: callMeClip, noCall: avoidCallingClip },
+  handoff: { hand: giveItemsClip, door: leaveAtDoorClip },
+  doorbell: { ring: ringBellClip, silent: dontRingTheBellClip },
+};
 
-function Sonar({ centreY }: { centreY: number }) {
-  const box = {
-    width: SONAR_D,
-    height: SONAR_D,
-    left: V8_OPTION_W / 2 - SONAR_D / 2,
-    top: centreY - SONAR_D / 2,
-  };
-  return (
-    // Under the thumb, which is opaque — so what you see is the wave leaving the
-    // pill and washing across the rest of the card.
-    <span aria-hidden="true" className="absolute inset-0 pointer-events-none">
-      {/* Pressure: a filled wave that gives the rings something to be the edge of. */}
-      <motion.span
-        className="absolute rounded-full will-change-transform"
-        style={{ ...box, backgroundColor: INK_ACTION }}
-        initial={{ scale: 0.4, opacity: 0.16 }}
-        animate={{ scale: 4.4, opacity: 0 }}
-        transition={{ duration: 0.55, ease: EASE_OUT_EXPO }}
-      />
-      {SONAR_DELAYS.map((delay) => (
-        <motion.span
-          key={delay}
-          className="absolute rounded-full will-change-transform"
-          style={{ ...box, border: `2px solid ${INK_ACTION}` }}
-          initial={{ scale: 0.34, opacity: 0.62 }}
-          animate={{ scale: 4, opacity: 0 }}
-          transition={{ duration: 0.68, delay, ease: EASE_OUT_EXPO }}
-        />
-      ))}
-    </span>
-  );
-}
+/** If `ended` never fires (stalled decode), hand off to the selected state anyway. */
+const CLIP_FALLBACK_MS = 2400;
 
 /* ================================================================
  *  Switch card — Figma "Delivery Instructions" 1065:50156
@@ -157,16 +128,30 @@ function SwitchCard({
     card.options.findIndex((o) => o.id === choice),
   );
   const ref = useRef<HTMLDivElement>(null);
+  // One preloaded video per option, so whichever is tapped starts instantly
+  // inside the gesture (iOS won't let a src swap + play() count as one).
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const pointerDownX = useRef<number | null>(null);
-  /** Bumped by every tap — including one that doesn't change the choice. */
-  const [playKey, setPlayKey] = useState(0);
-  const [sonarKey, setSonarKey] = useState(0);
-  const [sonarIndex, setSonarIndex] = useState(index);
+  /** Which option's clip is playing, if any. */
+  const [playing, setPlaying] = useState<number | null>(null);
+  const clipPlaying = playing !== null;
+  // The answer changes on tap (aria-checked is honest at once), but the thumb
+  // and the label weights wait for the clip — the clip IS the transition.
+  const [shownIndex, setShownIndex] = useState(index);
+  useEffect(() => {
+    if (!clipPlaying) setShownIndex(index);
+  }, [clipPlaying, index]);
 
-  const top = index * V8_OPTION_H;
+  useEffect(() => {
+    if (!clipPlaying) return;
+    const id = window.setTimeout(() => setPlaying(null), CLIP_FALLBACK_MS);
+    return () => window.clearTimeout(id);
+  }, [clipPlaying, playing]);
 
-  // The thumb is a physical object: y is where it's told to be, `thumbY` is
-  // where it actually is, and the stretch is read off how fast it's moving.
+  const top = shownIndex * V8_OPTION_H;
+
+  // The thumb is still a physical object once the clip hands over: it springs
+  // to the new option and stretches with its own velocity.
   const y = useMotionValue(top);
   const thumbY = useSpring(y, THUMB_SPRING);
   const velocity = useVelocity(thumbY);
@@ -192,13 +177,19 @@ function SwitchCard({
     pointerDownX.current = null;
     if (startX !== null && Math.abs(event.clientX - startX) > DRAG_SLOP_PX) return;
 
-    const option = card.options[optionIndex];
-    setPlayKey((k) => k + 1);
-    if (option.sound && !reduceMotion) {
-      setSonarIndex(optionIndex);
-      setSonarKey((k) => k + 1);
+    // play() must be called inside the user gesture for iOS. If the clip can't
+    // start (not buffered, autoplay policy) we skip straight to the selection
+    // rather than leaving the card stuck. Re-tapping replays it.
+    const clip = videoRefs.current[optionIndex];
+    if (clip && !reduceMotion) {
+      videoRefs.current.forEach((other, i) => {
+        if (other && i !== optionIndex) other.pause();
+      });
+      clip.currentTime = 0;
+      setPlaying(optionIndex);
+      clip.play().catch(() => setPlaying((p) => (p === optionIndex ? null : p)));
     }
-    onPick(option.id);
+    onPick(card.options[optionIndex].id);
     hapticTick();
     revealSelf();
   };
@@ -217,15 +208,6 @@ function SwitchCard({
       }}
     >
       <div role="radiogroup" aria-label={card.groupLabel} className="relative" style={{ width: V8_OPTION_W, height: V8_OPTION_H * 2 }}>
-        {/* Its own AnimatePresence, and not just for the key: the page sits in the
-            app's page-transition AnimatePresence (initial={false}), and Motion
-            hands that down, so anything mounting later inside the page would
-            skip its entrance and appear already finished — an invisible ripple.
-            A nearer AnimatePresence resets it. */}
-        <AnimatePresence>
-          {sonarKey > 0 && <Sonar key={sonarKey} centreY={sonarIndex * V8_OPTION_H + V8_OPTION_H / 2} />}
-        </AnimatePresence>
-
         <motion.span
           aria-hidden="true"
           className="absolute left-0 top-0 rounded-12 border border-white bg-white drop-shadow-[0_1px_3px_rgba(34,34,34,0.1)] pointer-events-none will-change-transform"
@@ -240,6 +222,7 @@ function SwitchCard({
 
         {card.options.map((option, i) => {
           const on = i === index;
+          const shown = i === shownIndex;
           const lines = option.label.includes("\n") ? "whitespace-pre-line" : "";
           return (
             <button
@@ -257,13 +240,7 @@ function SwitchCard({
               style={{ height: V8_OPTION_H }}
             >
               <span className="flex size-5 shrink-0 items-center justify-center">
-                <OptionGlyph
-                  glyph={option.glyph}
-                  size={option.glyphSize}
-                  selected={on}
-                  playKey={on ? playKey : 0}
-                  reduceMotion={reduceMotion}
-                />
+                <OptionGlyph glyph={option.glyph} size={option.glyphSize} selected={shown} reduceMotion={reduceMotion} />
               </span>
               {/* Both weights occupy the same cell and crossfade, so the label
                   never reflows as it changes weight. */}
@@ -273,7 +250,7 @@ function SwitchCard({
                   className={`[grid-area:1/1] font-semibold ${lines}`}
                   style={{ color: INK_PRIMARY }}
                   initial={false}
-                  animate={{ opacity: on ? 1 : 0 }}
+                  animate={{ opacity: shown ? 1 : 0 }}
                   transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
                 >
                   {option.label}
@@ -283,7 +260,7 @@ function SwitchCard({
                   className={`[grid-area:1/1] font-normal ${lines}`}
                   style={{ color: INK_TERTIARY }}
                   initial={false}
-                  animate={{ opacity: on ? 0 : 1 }}
+                  animate={{ opacity: shown ? 0 : 1 }}
                   transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
                 >
                   {option.label}
@@ -293,6 +270,31 @@ function SwitchCard({
           );
         })}
       </div>
+
+      {/* v4's showcase: while it plays the card IS the illustration, full-bleed
+          over both options; when it ends it dissolves as the thumb springs to
+          the new answer. Always mounted (hidden) so play() is instant. Taps
+          pass through it to the options underneath, so a new pick mid-clip
+          simply restarts it. */}
+      {card.options.map((option, i) => (
+        <motion.video
+          key={option.id}
+          ref={(el) => {
+            videoRefs.current[i] = el;
+          }}
+          src={OPTION_CLIP[card.id][option.id]}
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          tabIndex={-1}
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+          initial={false}
+          animate={{ opacity: playing === i ? 1 : 0 }}
+          transition={playing === i ? { duration: 0.12, ease: "easeOut" } : { duration: 0.28, ease: "easeOut" }}
+          onEnded={() => setPlaying((p) => (p === i ? null : p))}
+        />
+      ))}
     </div>
   );
 }

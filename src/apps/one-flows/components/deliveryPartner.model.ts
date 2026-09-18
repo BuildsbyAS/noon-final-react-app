@@ -8,8 +8,8 @@
  *
  * What v6 adds is its own chip phrasing: a short label plus a trailing clause
  * ("Call me" … "when delivering") instead of v1's rider-voiced sentence. Figma
- * draws one chip per question; the other chip labels are authored to fit the
- * same clause.
+ * draws one chip per question; the rest are authored. Chip and panel read the
+ * same words for every option (see `label`).
  */
 
 export type PartnerSlotId = "call" | "doorbell" | "handoff";
@@ -26,11 +26,20 @@ export type PartnerOption = {
   id: string;
   /** Panel card glyph. */
   glyph: PartnerGlyphId;
-  /** Panel card label. `\n` reproduces the design's hard wrap. */
-  card: string;
-  /** What the chip reads once this option is picked. */
-  chip: { label: string; glyph: ChipGlyph };
+  /**
+   * The option's words — ONE string for both places, so the chip and the panel
+   * card can never disagree. The card honours `\n` as a line break; the chip
+   * reads it as a space.
+   */
+  label: string;
+  /** Glyph shown in the chip once this option is picked. */
+  chipGlyph: ChipGlyph;
 };
+
+/** The label as the chip reads it: one line. */
+export function chipLabel(option: PartnerOption): string {
+  return option.label.replace(/\n/g, " ");
+}
 
 export type PartnerSlot = {
   id: PartnerSlotId;
@@ -47,34 +56,24 @@ export const PARTNER_SLOTS: PartnerSlot[] = [
     id: "call",
     trailing: "when delivering",
     options: [
-      { id: "call", glyph: "call", card: "Call me", chip: { label: "Call me", glyph: { outline: "callRinging" } } },
-      { id: "noCall", glyph: "callOff", card: "No calls", chip: { label: "Don’t call me", glyph: { filled: "callOff" } } },
+      { id: "call", glyph: "call", label: "Call me", chipGlyph: { outline: "callRinging" } },
+      { id: "noCall", glyph: "callOff", label: "Avoid\ncalling me", chipGlyph: { filled: "callOff" } },
     ],
   },
   {
     id: "doorbell",
     trailing: "when you reach",
     options: [
-      { id: "ring", glyph: "bell", card: "Ring doorbell", chip: { label: "Ring bell", glyph: { outline: "notification" } } },
-      {
-        id: "silent",
-        glyph: "bellOff",
-        card: "Don’t ring the bell",
-        chip: { label: "Don’t ring bell", glyph: { filled: "bellOff" } },
-      },
+      { id: "ring", glyph: "bell", label: "Ring doorbell", chipGlyph: { outline: "notification" } },
+      { id: "silent", glyph: "bellOff", label: "Don’t ring doorbell", chipGlyph: { filled: "bellOff" } },
     ],
   },
   {
     id: "handoff",
     trailing: null,
     options: [
-      { id: "hand", glyph: "hand", card: "Hand it\nto me", chip: { label: "Hand it to me", glyph: { filled: "hand" } } },
-      {
-        id: "door",
-        glyph: "door",
-        card: "Leave order\nat the door",
-        chip: { label: "Leave items at the door", glyph: { outline: "doorOpen" } },
-      },
+      { id: "hand", glyph: "hand", label: "Give me\nthe items", chipGlyph: { filled: "hand" } },
+      { id: "door", glyph: "door", label: "Leave items\nat the door", chipGlyph: { outline: "doorOpen" } },
     ],
   },
 ];

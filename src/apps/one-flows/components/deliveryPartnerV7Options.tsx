@@ -21,17 +21,15 @@
  * roughly half the length of entrances. Content staggers in behind the panel so
  * the container reads as the thing that arrived, not the text.
  */
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { hapticTick } from "@ui";
-import { InstructionCheckbox } from "./MCheckbox";
 import { PartnerGlyph } from "./deliveryPartnerV7Icons";
 import { PANEL_TITLE, type PartnerSlot } from "./deliveryPartnerV7.model";
 
 const INK_PRIMARY = "#1d2539";
 const INK_SECONDARY = "#475067";
 const SURFACE_ACTION_SUBTLE = "#ebf4ff";
-const SURFACE_SECONDARY = "#f9f9fb";
 const BORDER_ACTION = "#d6e9ff";
 const BORDER_SUBTLE = "#f2f3f7";
 
@@ -209,9 +207,7 @@ export function OptionsPopover({
   placement,
   containerWidth,
   selectedId,
-  save,
   onSelect,
-  onSaveChange,
   reduceMotion,
 }: {
   slot: PartnerSlot;
@@ -220,13 +216,10 @@ export function OptionsPopover({
   /** Width of the positioning root — the panel clamps inside it. */
   containerWidth: number;
   selectedId: string;
-  save: boolean;
   onSelect: (optionId: string) => void;
-  onSaveChange: (next: boolean) => void;
   reduceMotion: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const titleId = useId();
   const [box, setBox] = useState<Box | null>(null);
 
   // Measured rather than derived: the chip's width follows whichever option is
@@ -255,12 +248,12 @@ export function OptionsPopover({
   return (
     <motion.div
       ref={ref}
-      // A dialog wrapping a radiogroup, not a bare radiogroup: the panel also
-      // carries the save toggle, so the chip's aria-haspopup="dialog" is only
-      // honest if the whole panel is the dialog and the options are a group.
+      // Just the options — no title and no save row; the card's own save row
+      // is the one place that preference lives. The title survives as the
+      // accessible name.
       role="dialog"
       data-options-panel
-      aria-labelledby={titleId}
+      aria-label={PANEL_TITLE}
       custom={custom}
       variants={panelVariants}
       initial="hidden"
@@ -268,7 +261,7 @@ export function OptionsPopover({
       exit="gone"
       className="
         absolute z-20 w-max max-w-[347px]
-        flex flex-col gap-2.5 pt-3
+        p-3
         bg-white rounded-16 overflow-hidden
         shadow-[0_4px_20px_0_rgba(14,14,14,0.08)]
         will-change-transform
@@ -281,13 +274,7 @@ export function OptionsPopover({
         transformOrigin: `${box?.originX ?? 0}px ${placement === "above" ? "100%" : "0%"}`,
       }}
     >
-      <motion.div custom={custom} variants={itemVariants} className="px-3 pb-1">
-        <p id={titleId} className="text-[14px] leading-5 tracking-[-0.1px] font-bold text-black">
-          {PANEL_TITLE}
-        </p>
-      </motion.div>
-
-      <div role="radiogroup" aria-labelledby={titleId} className="flex items-stretch gap-3 px-3 pb-0.5">
+      <div role="radiogroup" aria-label={PANEL_TITLE} className="flex items-stretch gap-3">
         {slot.options.map((option) => {
           const on = option.id === selectedId;
           const surface = on ? SURFACE_ACTION_SUBTLE : "#ffffff";
@@ -333,36 +320,13 @@ export function OptionsPopover({
                   className="text-[14px] leading-5 font-semibold text-center whitespace-pre"
                   style={{ color: on ? INK_PRIMARY : INK_SECONDARY }}
                 >
-                  {option.card}
+                  {option.label}
                 </span>
               </motion.button>
             </motion.div>
           );
         })}
       </div>
-
-      <motion.button
-        custom={custom}
-        variants={itemVariants}
-        type="button"
-        role="checkbox"
-        aria-checked={save}
-        onClick={() => {
-          onSaveChange(!save);
-          hapticTick();
-        }}
-        className="
-          flex items-center gap-1.5 w-full px-3.5 py-3 cursor-pointer text-left
-          outline-none focus-visible:outline focus-visible:outline-2
-          focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:-2px]
-        "
-        style={{ backgroundColor: SURFACE_SECONDARY }}
-      >
-        <InstructionCheckbox checked={save} knockout={SURFACE_SECONDARY} reduceMotion={reduceMotion} />
-        <span className="text-[13px] leading-5 tracking-[-0.1px]" style={{ color: INK_SECONDARY }}>
-          Save for future orders at this address
-        </span>
-      </motion.button>
     </motion.div>
   );
 }

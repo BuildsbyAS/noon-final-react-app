@@ -27,6 +27,8 @@ import DeliveryInstructionsWidgetV5 from "./DeliveryInstructionsWidgetV5";
 import DeliveryInstructionsWidgetV6 from "./DeliveryInstructionsWidgetV6";
 import DeliveryInstructionsWidgetV7 from "./DeliveryInstructionsWidgetV7";
 import DeliveryInstructionsWidgetV8 from "./DeliveryInstructionsWidgetV8";
+import DeliveryInstructionsWidgetV9 from "./DeliveryInstructionsWidgetV9";
+import DeliveryInstructionsWidgetV10 from "./DeliveryInstructionsWidgetV10";
 import type { InstructionId } from "./deliveryInstructions.model";
 import {
   DEFAULT_DELIVERY_PREFERENCES,
@@ -40,6 +42,8 @@ import {
   type PartnerChoices as PartnerV7Choices,
 } from "./deliveryPartnerV7.model";
 import { DEFAULT_V8_VALUE, type V8Value } from "./deliveryInstructionsV8.model";
+import { DEFAULT_V9_CHOICES, type V9Choices } from "./deliveryPartnerV9.model";
+import { DEFAULT_V10_VALUE, type V10Value } from "./deliveryInstructionsV10.model";
 import headerImg from "../assets/order-confirmation/header.png";
 import orderPlacedImg from "../assets/order-confirmation/order-placed.png";
 import deliveryInfoImg from "../assets/order-confirmation/delivery-info.png";
@@ -63,7 +67,7 @@ const PAGE_BG = "#f2f3f7";
  * v3 and v5 were swapped on request — the carousel took the v3 pill and the
  * chip card moved to v5, so a `?v=3` link now opens the carousel.
  */
-export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 const VARIANTS: { id: WidgetVariant; label: string }[] = [
   { id: 1, label: "v1" },
   { id: 2, label: "v2" },
@@ -73,6 +77,8 @@ const VARIANTS: { id: WidgetVariant; label: string }[] = [
   { id: 6, label: "v6" },
   { id: 7, label: "v7" },
   { id: 8, label: "v8" },
+  { id: 9, label: "v9" },
+  { id: 10, label: "v10" },
 ];
 
 export function parseWidgetVariant(raw: string | null): WidgetVariant {
@@ -129,6 +135,8 @@ export default function OrderConfirmationPage({
   const [partnerChoices, setPartnerChoices] = useState<PartnerChoices>(DEFAULT_PARTNER_CHOICES);
   const [partnerV7Choices, setPartnerV7Choices] = useState<PartnerV7Choices>(DEFAULT_PARTNER_V7_CHOICES);
   const [v8Value, setV8Value] = useState<V8Value>(DEFAULT_V8_VALUE);
+  const [v9Choices, setV9Choices] = useState<V9Choices>(DEFAULT_V9_CHOICES);
+  const [v10Value, setV10Value] = useState<V10Value>(DEFAULT_V10_VALUE);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const ChipWidget = variant === 4 || variant === 5 ? CHIP_WIDGET[variant] : null;
@@ -175,7 +183,15 @@ export default function OrderConfirmationPage({
         className="absolute left-[255px] top-[53px] w-28 h-11 rounded-full cursor-pointer"
       />
 
-      <div className="absolute left-0 top-[101px] w-[375px] flex flex-col gap-4 px-3 pt-4">
+      <div
+        className={`absolute left-0 top-[101px] w-[375px] flex flex-col gap-4 px-3 pt-4 ${
+          // v10 stands 289 tall, which would run under the footer on this fixed
+          // 812 screen — so for v10 alone the content scrolls above the footer.
+          variant === 10
+            ? "bottom-[90px] overflow-y-auto overscroll-contain pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : ""
+        }`}
+      >
         {/* These two carry real information as flat pixels, so they get
             descriptive alt text rather than being marked decorative. */}
         <img
@@ -215,6 +231,10 @@ export default function OrderConfirmationPage({
           />
         ) : variant === 8 ? (
           <DeliveryInstructionsWidgetV8 value={v8Value} onChange={setV8Value} />
+        ) : variant === 9 ? (
+          <DeliveryInstructionsWidgetV9 value={v9Choices} onChange={setV9Choices} />
+        ) : variant === 10 ? (
+          <DeliveryInstructionsWidgetV10 value={v10Value} onChange={setV10Value} />
         ) : (
           <DeliveryInstructionsWidgetV1
             value={riderChoices}
@@ -270,6 +290,8 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
   // v7 is v6's layout with an interactive partner, so they share a silhouette.
   const partner = variant === 6 || variant === 7;
   const v8 = variant === 8;
+  const v9 = variant === 9;
+  const v10 = variant === 10;
   return (
     <div
       className="relative w-[375px] h-[812px] overflow-hidden"
@@ -292,7 +314,11 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
 
       <div
         className="absolute left-3 top-[471px] w-[351px] rounded-16 bg-white overflow-hidden"
-        style={{ height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : 160 }}
+        style={{
+          height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : v9 ? 252 : v10 ? 289 : 160,
+          // v10's card sits 16px lower (room for the partner peeking over it).
+          marginTop: v10 ? 16 : 0,
+        }}
       >
         <div className="absolute left-4 top-[15px]">
           <Skel className="h-4 w-[132px] rounded-4" />
@@ -335,6 +361,54 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
               <Skel className="size-5 rounded-4" />
             </div>
             <div className="absolute left-10 top-[182px]">
+              <Skel className="h-5 w-[240px] rounded-4" />
+            </div>
+          </>
+        ) : v10 ? (
+          <>
+            {/* v10: address line at y 44, three 100×120 cards at x 10 / 120 / 230
+                (y 69), the record row at y 201, the save row at 257. */}
+            <div className="absolute left-3 top-[44px]">
+              <Skel className="h-4 w-[210px] rounded-4" />
+            </div>
+            {[10, 120, 230].map((left) => (
+              <div key={left} className="absolute top-[69px]" style={{ left }}>
+                <Skel className="w-[100px] h-[120px] rounded-12" />
+              </div>
+            ))}
+            <div className="absolute left-3 top-[201px]">
+              <Skel className="w-[327px] h-10 rounded-12" />
+            </div>
+            <div className="absolute left-[14px] top-[257px]">
+              <Skel className="size-5 rounded-4" />
+            </div>
+            <div className="absolute left-10 top-[257px]">
+              <Skel className="h-5 w-[240px] rounded-4" />
+            </div>
+          </>
+        ) : v9 ? (
+          <>
+            {/* v9: three toggle rows at y 46 / 87 / 128, the partner frame at
+                (260, 18), the record row at y 170, the save row at 220. */}
+            {[
+              [46, 122],
+              [87, 128],
+              [128, 213],
+            ].map(([top, width]) => (
+              <div key={top} className="absolute left-3" style={{ top }}>
+                <Skel className="h-[34px] rounded-full" style={{ width }} />
+              </div>
+            ))}
+            <div className="absolute left-[260px] top-[18px]">
+              <Skel className="w-[91px] h-[150px] rounded-16" />
+            </div>
+            <div className="absolute left-3 top-[170px]">
+              <Skel className="w-[327px] h-10 rounded-12" />
+            </div>
+            <div className="absolute left-[14px] top-[220px]">
+              <Skel className="size-5 rounded-4" />
+            </div>
+            <div className="absolute left-10 top-[220px]">
               <Skel className="h-5 w-[240px] rounded-4" />
             </div>
           </>

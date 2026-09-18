@@ -21,8 +21,8 @@
  * by a clause ("Call me ⌄ when delivering"), and tapping a chip opens v1's
  * options panel anchored to it while the rest of the screen recedes. Below the
  * chips, a record row speaks up to the rider illustration through a bubble
- * tail, and the save preference sits at the foot of the card (it's the same
- * preference the panel's footer toggles).
+ * tail, and the save preference sits at the foot of the card — the only place it
+ * lives, since the panels show just the options.
  *
  * Geometry is the Figma frame: header 44, body 177, save row 42. Two structural
  * notes carried over from v1:
@@ -42,7 +42,7 @@
  * No <PageTransition> / <SkeletonGate> — this is a widget; OrderConfirmationPage
  * owns both for the screen.
  */
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { hapticTick } from "@ui";
 import { InstructionCheckbox } from "./MCheckbox";
@@ -60,6 +60,7 @@ import {
   PARTNER_NOTE_DURATION_MS,
   PARTNER_SLOTS,
   PARTNER_VOICE_LABEL,
+  chipLabel,
   partnerOptionFor,
   type PartnerChoices,
   type PartnerSlot,
@@ -71,12 +72,14 @@ import riderCallImg from "../assets/delivery-partner-v7/rider-call.png";
 import riderNoCallImg from "../assets/delivery-partner-v7/rider-no-call.png";
 import riderRingBellImg from "../assets/delivery-partner-v7/rider-ring-bell.png";
 import riderNoRingImg from "../assets/delivery-partner-v7/rider-no-ring.png";
+import riderGiveItemsImg from "../assets/delivery-partner-v7/rider-give-items.png";
+import riderLeaveAtDoorImg from "../assets/delivery-partner-v7/rider-leave-at-door.png";
 
 /* ================================================================
  *  Partner poses
  * ================================================================ */
 
-type Pose = "default" | "call" | "noCall" | "ringBell" | "noRing";
+type Pose = "default" | "call" | "noCall" | "ringBell" | "noRing" | "giveItems" | "leaveAtDoor";
 
 const POSE_SRC: Record<Pose, string> = {
   default: riderImg,
@@ -84,22 +87,39 @@ const POSE_SRC: Record<Pose, string> = {
   noCall: riderNoCallImg,
   ringBell: riderRingBellImg,
   noRing: riderNoRingImg,
+  giveItems: riderGiveItemsImg,
+  leaveAtDoor: riderLeaveAtDoorImg,
 };
 
 /** The pose for a panel's selected option. Options without art use the default. */
 function poseFor(slot: PartnerSlotId, optionId: string): Pose {
   if (slot === "call" && optionId === "call") return "call";
-  // Panel card reads "No calls"; the chip reads "Don't call me".
   if (slot === "call" && optionId === "noCall") return "noCall";
   if (slot === "doorbell" && optionId === "ring") return "ringBell";
   if (slot === "doorbell" && optionId === "silent") return "noRing";
+  if (slot === "handoff" && optionId === "hand") return "giveItems";
+  if (slot === "handoff" && optionId === "door") return "leaveAtDoor";
   return "default";
 }
 
-function PartnerIllustration({ pose, reduceMotion }: { pose: Pose; reduceMotion: boolean }) {
+/** Where Figma puts the partner art: x 215 + 21.5 inside its image box. */
+const ART_LEFT = 236.5;
+/** Clear air kept between the longest line of text and the partner art. */
+const ART_GAP = 6;
+
+function PartnerIllustration({
+  pose,
+  nudge,
+  reduceMotion,
+}: {
+  pose: Pose;
+  /** How far right to slide the partner so a long line of text clears it. */
+  nudge: number;
+  reduceMotion: boolean;
+}) {
   // Warm the reaction poses so the first pop doesn't wait on a 1MB download.
   useEffect(() => {
-    for (const src of [riderCallImg, riderNoCallImg, riderRingBellImg, riderNoRingImg]) {
+    for (const src of [riderCallImg, riderNoCallImg, riderRingBellImg, riderNoRingImg, riderGiveItemsImg, riderLeaveAtDoorImg]) {
       const img = new Image();
       img.src = src;
     }
@@ -110,7 +130,14 @@ function PartnerIllustration({ pose, reduceMotion }: { pose: Pose; reduceMotion:
     // inside it — so the partner starts at x 236.5, rises into the header, and
     // runs past the card's right edge, which clips it. Every pose shares that
     // framing, so poses stack in the same box.
-    <div aria-hidden="true" className="absolute left-[236.5px] top-[-24px] w-[128px] h-[150px] pointer-events-none select-none">
+    <motion.div
+      aria-hidden="true"
+      className="absolute top-[-24px] w-[128px] h-[150px] pointer-events-none select-none"
+      style={{ left: ART_LEFT }}
+      initial={false}
+      animate={{ x: nudge }}
+      transition={reduceMotion ? { duration: 0 } : SPRING}
+    >
       <AnimatePresence initial={false}>
         <motion.img
           key={pose}
@@ -143,7 +170,7 @@ function PartnerIllustration({ pose, reduceMotion }: { pose: Pose; reduceMotion:
           }
         />
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
@@ -164,14 +191,15 @@ const CHIP_SURFACE = "bg-[linear-gradient(180deg,#f9f9fb_30.823%,#eaecf0_126.25%
 
 /**
  * Which side of its chip each panel opens on. v1 opens the lower two upward, but
- * in v7 an upward panel lands on top of the partner — the doorbell panel hid the
- * very bell the pose is pressing — so the doorbell panel drops down instead.
- * Either way a panel never covers the line being edited.
+ * in v7 an upward panel lands on top of the partner and hides the very pose it
+ * triggers (the doorbell panel covered the bell being pressed), so every panel
+ * drops down. Options-only panels are short enough that even the handoff one
+ * fits inside the card below its chip. A panel never covers its own line.
  */
 const PLACEMENT: Record<PartnerSlotId, Placement> = {
   call: "below",
   doorbell: "below",
-  handoff: "above",
+  handoff: "below",
 };
 
 /** Defocus for everything that isn't the line being edited. */
@@ -204,7 +232,8 @@ function DropdownChip({
   onToggle: () => void;
   chipRef: (el: HTMLElement | null) => void;
 }) {
-  const { chip } = slot.options.find((o) => o.id === optionId) ?? slot.options[0];
+  const option = slot.options.find((o) => o.id === optionId) ?? slot.options[0];
+  const label = chipLabel(option);
   const { trailing } = slot;
   const swap = reduceMotion ? { duration: 0.12 } : { duration: 0.26, ease: EASE_OUT };
 
@@ -214,7 +243,7 @@ function DropdownChip({
       type="button"
       aria-haspopup="dialog"
       aria-expanded={active}
-      aria-label={`${chip.label}${trailing ? ` ${trailing}` : ""}. Change.`}
+      aria-label={`${label}${trailing ? ` ${trailing}` : ""}. Change.`}
       onClick={onToggle}
       // The pill resizes to whichever answer is in it; `layout` morphs that
       // width on a spring, and the blurred swap below hides the scale distortion.
@@ -235,7 +264,7 @@ function DropdownChip({
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6, filter: "blur(3px)" }}
             transition={swap}
           >
-            <PartnerChipGlyph glyph={chip.glyph} ink={INK_PRIMARY} knockout={CHIP_KNOCKOUT} />
+            <PartnerChipGlyph glyph={option.chipGlyph} ink={INK_PRIMARY} knockout={CHIP_KNOCKOUT} />
           </motion.span>
         </AnimatePresence>
       </span>
@@ -252,7 +281,7 @@ function DropdownChip({
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -7, filter: "blur(4px)" }}
           transition={swap}
         >
-          {chip.label}
+          {label}
         </motion.span>
       </AnimatePresence>
 
@@ -460,6 +489,36 @@ export default function DeliveryInstructionsWidgetV7({
   // picking and closing can never leave it out of step.
   const pose: Pose = open ? poseFor(open, value[open]) : "default";
 
+  // A long answer can push its clause ("when you reach") into the partner art.
+  // Rather than cut the text, slide the partner right by exactly the overlap.
+  // Measured from layout (offsets), not the screen, so the chip's in-flight
+  // width morph doesn't make the partner jitter.
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const [nudge, setNudge] = useState(0);
+  useLayoutEffect(() => {
+    const rows = rowsRef.current;
+    if (!rows) return;
+    // Offsets up to the rows container, which sits at x 0 like the art. The
+    // row itself is the clause's offsetParent (its recede animation makes it
+    // one), so the chain has to be walked, not read once.
+    const rightEdge = (el: HTMLElement) => {
+      let x = el.offsetLeft + el.offsetWidth;
+      let parent = el.offsetParent as HTMLElement | null;
+      while (parent && parent !== rows) {
+        x += parent.offsetLeft;
+        parent = parent.offsetParent as HTMLElement | null;
+      }
+      return x + rows.offsetLeft;
+    };
+    const measure = () => {
+      const clauses = rows.querySelectorAll<HTMLElement>("[data-trailing]");
+      const right = Math.max(0, ...[...clauses].map(rightEdge));
+      setNudge(Math.max(0, right + ART_GAP - ART_LEFT));
+    };
+    measure();
+    void document.fonts?.ready.then(measure);
+  }, [value]);
+
   return (
     <div ref={rootRef} className={`relative w-[351px] shrink-0 ${className}`}>
       <section
@@ -485,9 +544,9 @@ export default function DeliveryInstructionsWidgetV7({
         </motion.div>
 
         <div className="relative h-[177px] shrink-0">
-          <PartnerIllustration pose={pose} reduceMotion={reduceMotion} />
+          <PartnerIllustration pose={pose} nudge={nudge} reduceMotion={reduceMotion} />
 
-          <div className="absolute left-0 top-1 flex w-[272px] flex-col gap-2 px-3 pb-3">
+          <div ref={rowsRef} className="absolute left-0 top-1 flex w-[272px] flex-col gap-2 px-3 pb-3">
             {PARTNER_SLOTS.map((slot) => {
               const active = open === slot.id;
               const { trailing } = slot;
@@ -509,6 +568,7 @@ export default function DeliveryInstructionsWidgetV7({
                   {trailing && (
                     <motion.span
                       aria-hidden="true"
+                      data-trailing
                       layout={reduceMotion ? false : "position"}
                       transition={{ layout: SPRING }}
                       className="text-[14px] leading-5 tracking-[-0.1px] font-medium whitespace-nowrap"
@@ -557,9 +617,7 @@ export default function DeliveryInstructionsWidgetV7({
             placement={PLACEMENT[openSlot.id]}
             containerWidth={CARD_W}
             selectedId={value[openSlot.id]}
-            save={save}
             reduceMotion={reduceMotion}
-            onSaveChange={setSave}
             onSelect={(optionId) => {
               onChange({ ...value, [openSlot.id]: optionId }, openSlot.id, optionId);
               // Stays open so the partner's reaction can be seen.

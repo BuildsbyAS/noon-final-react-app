@@ -9,8 +9,8 @@
  * by a clause ("Call me ⌄ when delivering"), and tapping a chip opens v1's
  * options panel anchored to it while the rest of the screen recedes. Below the
  * chips, a record row speaks up to the rider illustration through a bubble
- * tail, and the save preference sits at the foot of the card (it's the same
- * preference the panel's footer toggles).
+ * tail, and the save preference sits at the foot of the card — the only place it
+ * lives, since the panels show just the options.
  *
  * Geometry is the Figma frame: header 44, body 177, save row 42. Two structural
  * notes carried over from v1:
@@ -48,6 +48,7 @@ import {
   PARTNER_NOTE_DURATION_MS,
   PARTNER_SLOTS,
   PARTNER_VOICE_LABEL,
+  chipLabel,
   partnerOptionFor,
   type PartnerChoices,
   type PartnerSlot,
@@ -111,7 +112,8 @@ function DropdownChip({
   onToggle: () => void;
   chipRef: (el: HTMLElement | null) => void;
 }) {
-  const { chip } = slot.options.find((o) => o.id === optionId) ?? slot.options[0];
+  const option = slot.options.find((o) => o.id === optionId) ?? slot.options[0];
+  const label = chipLabel(option);
   const { trailing } = slot;
   const swap = reduceMotion ? { duration: 0.12 } : { duration: 0.26, ease: EASE_OUT };
 
@@ -121,7 +123,7 @@ function DropdownChip({
       type="button"
       aria-haspopup="dialog"
       aria-expanded={active}
-      aria-label={`${chip.label}${trailing ? ` ${trailing}` : ""}. Change.`}
+      aria-label={`${label}${trailing ? ` ${trailing}` : ""}. Change.`}
       onClick={onToggle}
       // The pill resizes to whichever answer is in it; `layout` morphs that
       // width on a spring, and the blurred swap below hides the scale distortion.
@@ -142,7 +144,7 @@ function DropdownChip({
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6, filter: "blur(3px)" }}
             transition={swap}
           >
-            <PartnerChipGlyph glyph={chip.glyph} ink={INK_PRIMARY} knockout={CHIP_KNOCKOUT} />
+            <PartnerChipGlyph glyph={option.chipGlyph} ink={INK_PRIMARY} knockout={CHIP_KNOCKOUT} />
           </motion.span>
         </AnimatePresence>
       </span>
@@ -159,7 +161,7 @@ function DropdownChip({
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -7, filter: "blur(4px)" }}
           transition={swap}
         >
-          {chip.label}
+          {label}
         </motion.span>
       </AnimatePresence>
 
@@ -469,9 +471,7 @@ export default function DeliveryInstructionsWidgetV6({
             placement={PLACEMENT[openSlot.id]}
             containerWidth={CARD_W}
             selectedId={value[openSlot.id]}
-            save={save}
             reduceMotion={reduceMotion}
-            onSaveChange={setSave}
             onSelect={(optionId) => {
               onChange({ ...value, [openSlot.id]: optionId }, openSlot.id, optionId);
               closeAfterPick();
