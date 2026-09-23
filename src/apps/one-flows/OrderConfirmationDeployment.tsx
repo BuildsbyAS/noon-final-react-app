@@ -25,6 +25,7 @@ export default function OrderConfirmationDeployment() {
 
   return (
     <div className="min-h-screen min-h-dvh w-full flex flex-col items-center justify-center gap-4">
+      <VariantSwitch value={variant} onChange={switchVariant} />
       <SmoothCorners radius={20}>
         <div className="relative w-[375px] h-[812px] overflow-hidden">
           <SkeletonGate skeleton={<OrderConfirmationSkeleton variant={variant} />}>
@@ -36,7 +37,6 @@ export default function OrderConfirmationDeployment() {
           </SkeletonGate>
         </div>
       </SmoothCorners>
-      <VariantSwitch value={variant} onChange={switchVariant} />
       {import.meta.env.DEV && <Retune port={9225} position="top-right" />}
     </div>
   )

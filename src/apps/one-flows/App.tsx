@@ -364,7 +364,19 @@ export default function App() {
   // SmoothCorners squircle clip stays so the inner content respects the
   // rounded edges, but the outer wrapper just centres it edge-to-edge.
   return (
-    <div className="w-full flex flex-col items-center gap-4">
+    <div className="w-full flex flex-col justify-center items-center gap-4">
+      {screen === "orderConfirmation" && !showSplash && (
+        <VariantSwitch
+          value={widgetVariant}
+          onChange={(next) => {
+            setWidgetVariant(next);
+            const url = new URL(window.location.href);
+            if (next === 1) url.searchParams.delete("v");
+            else url.searchParams.set("v", String(next));
+            window.history.replaceState(window.history.state, "", url);
+          }}
+        />
+      )}
       <SmoothCorners radius={20}>
         {showSplash ? (
           <SplashScreen onDone={() => setShowSplash(false)} />
@@ -387,18 +399,6 @@ export default function App() {
           </div>
         )}
       </SmoothCorners>
-      {screen === "orderConfirmation" && !showSplash && (
-        <VariantSwitch
-          value={widgetVariant}
-          onChange={(next) => {
-            setWidgetVariant(next);
-            const url = new URL(window.location.href);
-            if (next === 1) url.searchParams.delete("v");
-            else url.searchParams.set("v", String(next));
-            window.history.replaceState(window.history.state, "", url);
-          }}
-        />
-      )}
       {import.meta.env.DEV && <Retune port={9225} />}
     </div>
   );
