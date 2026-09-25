@@ -32,6 +32,8 @@ import DeliveryInstructionsWidgetV9 from "./DeliveryInstructionsWidgetV9";
 import DeliveryInstructionsWidgetV10 from "./DeliveryInstructionsWidgetV10";
 import DeliveryInstructionsWidgetV11 from "./DeliveryInstructionsWidgetV11";
 import DeliveryInstructionsWidgetV12 from "./DeliveryInstructionsWidgetV12";
+import DeliveryInstructionsWidgetV13 from "./DeliveryInstructionsWidgetV13";
+import DeliveryInstructionsWidgetV14 from "./DeliveryInstructionsWidgetV14";
 import type { InstructionId } from "./deliveryInstructions.model";
 import {
   DEFAULT_DELIVERY_PREFERENCES,
@@ -49,6 +51,8 @@ import { DEFAULT_V9_CHOICES, type V9Choices } from "./deliveryPartnerV9.model";
 import { DEFAULT_V10_VALUE, type V10Value } from "./deliveryInstructionsV10.model";
 import { DEFAULT_V11_VALUE, type V11Value } from "./deliveryInstructionsV11.model";
 import { DEFAULT_V12_VALUE, type V12Value } from "./deliveryInstructionsV12.model";
+import { DEFAULT_V13_VALUE, type V13Value } from "./deliveryInstructionsV13.model";
+import { DEFAULT_V14_VALUE, type V14Value } from "./deliveryInstructionsV14.model";
 import headerImg from "../assets/order-confirmation/header.png";
 import orderPlacedImg from "../assets/order-confirmation/order-placed.png";
 import deliveryInfoImg from "../assets/order-confirmation/delivery-info.png";
@@ -72,10 +76,10 @@ const PAGE_BG = "#f2f3f7";
  * v3 and v5 were swapped on request — the carousel took the v3 pill and the
  * chip card moved to v5, so a `?v=3` link now opens the carousel.
  */
-export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
 /**
- * The switcher's sections. v11 and v12 are the September 22 alignment round,
- * shown there as v1 and v2; their ids (and `?v=` links) stay 11 and 12.
+ * The switcher's sections. v11–v14 are the final round, shown there as
+ * v1–v4 in Anurag's order; their ids (and `?v=` links) are unchanged.
  */
 const VARIANT_GROUPS: { title: string; items: { id: WidgetVariant; label: string }[] }[] = [
   {
@@ -83,10 +87,14 @@ const VARIANT_GROUPS: { title: string; items: { id: WidgetVariant; label: string
     items: ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const).map((id) => ({ id, label: `v${id}` })),
   },
   {
-    title: "September 22 - Final Alignment",
+    title: "Final versions",
+    // Anurag's running order, which is not the order they were built in: the
+    // labels number the positions, while `id` (and every `?v=` link) stays put.
     items: [
-      { id: 11, label: "v1" },
+      { id: 13, label: "v1" },
       { id: 12, label: "v2" },
+      { id: 14, label: "v3" },
+      { id: 11, label: "v4" },
     ],
   },
 ];
@@ -406,6 +414,8 @@ export default function OrderConfirmationPage({
   const [v10Value, setV10Value] = useState<V10Value>(DEFAULT_V10_VALUE);
   const [v11Value, setV11Value] = useState<V11Value>(DEFAULT_V11_VALUE);
   const [v12Value, setV12Value] = useState<V12Value>(DEFAULT_V12_VALUE);
+  const [v13Value, setV13Value] = useState<V13Value>(DEFAULT_V13_VALUE);
+  const [v14Value, setV14Value] = useState<V14Value>(DEFAULT_V14_VALUE);
   const [sheetOpen, setSheetOpen] = useState(false);
   const reduceMotion = useReducedMotion() ?? false;
   // Which way the switch moved: a higher version rises in from below (the
@@ -523,6 +533,10 @@ export default function OrderConfirmationPage({
               <DeliveryInstructionsWidgetV9 value={v9Choices} onChange={setV9Choices} />
             ) : variant === 10 ? (
               <DeliveryInstructionsWidgetV10 value={v10Value} onChange={setV10Value} />
+            ) : variant === 14 ? (
+              <DeliveryInstructionsWidgetV14 value={v14Value} onChange={setV14Value} />
+            ) : variant === 13 ? (
+              <DeliveryInstructionsWidgetV13 value={v13Value} onChange={setV13Value} />
             ) : variant === 12 ? (
               <DeliveryInstructionsWidgetV12 value={v12Value} onChange={setV12Value} />
             ) : variant === 11 ? (
@@ -588,6 +602,8 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
   const v10 = variant === 10;
   const v11 = variant === 11;
   const v12 = variant === 12;
+  const v13 = variant === 13;
+  const v14 = variant === 14;
   return (
     <div
       className="relative w-[375px] h-[812px] overflow-hidden"
@@ -611,7 +627,7 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
       <div
         className="absolute left-3 top-[471px] w-[351px] rounded-16 bg-white overflow-hidden"
         style={{
-          height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : v9 ? 252 : v10 ? 289 : v11 ? 205 : v12 ? 222 : 160,
+          height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : v9 ? 252 : v10 ? 289 : v11 || v13 ? 205 : v12 || v14 ? 222 : 160,
           // v10's card sits 16px lower (room for the partner peeking over it).
           marginTop: v10 ? 16 : 0,
         }}
@@ -660,7 +676,7 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
               <Skel className="h-5 w-[240px] rounded-4" />
             </div>
           </>
-        ) : v12 ? (
+        ) : v12 || v14 ? (
           <>
             {/* v12: subtitle at y 46, the shared 331×112 switch card at (10, 64),
                 the save row at 178. */}
@@ -677,10 +693,10 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
               <Skel className="h-5 w-[240px] rounded-4" />
             </div>
           </>
-        ) : v11 ? (
+        ) : v11 || v13 ? (
           <>
-            {/* v11: three ~102×100 chips at x 12 / 124 / 237 (y 48), a divider at
-                160 and the save row at 173. */}
+            {/* v11 and v13: three ~102×100 chips at x 12 / 124 / 237 (y 48), a
+                divider at 160 and the save row at 173. */}
             {[12, 124, 237].map((left) => (
               <div key={left} className="absolute top-12" style={{ left }}>
                 <Skel className="w-[102px] h-[100px] rounded-12" />
