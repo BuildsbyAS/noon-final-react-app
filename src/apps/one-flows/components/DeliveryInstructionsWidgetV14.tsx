@@ -34,10 +34,11 @@ import { hapticTick } from "@ui";
 import { InstructionCheckbox } from "./MCheckbox";
 import TextMorph from "./deliveryInstructionsV14TextMorph";
 import {
+  ChevronDown16,
+  Cross16,
   INK_ACTION,
   INK_PRIMARY,
   OptionGlyph,
-  StaticGlyph,
 } from "./deliveryInstructionsV14Glyphs";
 import {
   AnswerPill,
@@ -74,6 +75,8 @@ import riderGiveItemsImg from "../assets/delivery-instructions-v14/rider-give-it
 import riderLeaveAtDoorImg from "../assets/delivery-instructions-v14/rider-leave-at-door.png";
 
 const INK_TERTIARY = "#666d85";
+/** The hairline ring around the calling card's round button. */
+const BORDER_CHEVRON = "#f2f3f7";
 const SURFACE_TRACK = "#f2f3f7";
 const SURFACE_CARD = "#f9f9fb";
 const BORDER_DASH = "#eaecf0";
@@ -328,7 +331,8 @@ const OPTION_POSE: Record<string, Exclude<Pose, "default">> = {
   hand: "giveItems",
   door: "leaveAtDoor",
   call: "call",
-  noCall: "noCall",
+  ifNeeded: "call",
+  avoid: "noCall",
   ring: "ringBell",
   silent: "noRing",
 };
@@ -484,7 +488,10 @@ function CallingCard({
     setPlayKey((k) => k + 1);
     onPick(next);
     // The picked pill holds its answer for a beat before the card closes over it.
-    window.setTimeout(close, reduceMotion ? 0 : PICK_BEAT_MS);
+    window.setTimeout(
+      () => close({ returnFocus: true }),
+      reduceMotion ? 0 : PICK_BEAT_MS,
+    );
   };
 
   return (
@@ -526,9 +533,10 @@ function CallingCard({
         aria-hidden={!expanded}
         inert={!expanded || undefined}
       >
+        {/* pr: the round button sits beside the title's first lines. */}
         <p
           id={titleId}
-          className="whitespace-pre-line text-[14px] leading-5 tracking-[-0.1px] font-bold"
+          className="whitespace-pre-line pr-[30px] text-[14px] leading-5 tracking-[-0.1px] font-bold"
           style={{ color: INK_PRIMARY }}
         >
           {V14_PANEL_TITLE}
@@ -614,26 +622,79 @@ function CallingCard({
         </span>
       </motion.div>
 
-      {/* Collapsed, the whole card is the target; expanded, the pills are. */}
-      {!expanded && (
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-haspopup="true"
-          aria-expanded={expanded}
-          aria-label={`${V14_CALL_CAPTION[value].replace("\n", " ")}. Change.`}
-          onPointerDown={() => setPressed(true)}
-          onPointerUp={() => setPressed(false)}
-          onPointerCancel={() => setPressed(false)}
-          onPointerLeave={() => setPressed(false)}
-          onClick={() => {
-            setPressed(false);
-            toggle();
-            hapticTick();
-          }}
-          className={`absolute inset-0 z-10 rounded-t-[24px] rounded-b-[20px] cursor-pointer ${FOCUS_RING}`}
-        />
-      )}
+      {/* v1's chevron, so the card says it opens. One button across both
+          states: it rides the sweeping right edge and only its glyph changes,
+          chevron → cross. Centred on the badge beside it (top 16, not 10). */}
+      <motion.button
+        type="button"
+        aria-label="Close"
+        aria-hidden={!expanded}
+        tabIndex={expanded ? 0 : -1}
+        onClick={() => {
+          close({ returnFocus: true });
+          hapticTick();
+        }}
+        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+        transition={{ type: "spring", duration: 0.25, bounce: 0 }}
+        // 24px button, 40px target, clear of the pills below it.
+        className={`absolute top-4 right-2.5 z-20 flex size-6 items-center justify-center rounded-full border border-solid bg-white transition-[background-color] duration-150 ease-out before:absolute before:-inset-2 before:content-[''] ${
+          expanded
+            ? "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#f4f5f9]"
+            : "pointer-events-none"
+        } ${FOCUS_RING}`}
+        style={{ borderColor: BORDER_CHEVRON }}
+      >
+        <span className="relative block size-4">
+          <AnimatePresence initial={false}>
+            <motion.span
+              key={expanded ? "cross" : "chevron"}
+              className="absolute inset-0"
+              initial={
+                reduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, rotate: expanded ? -90 : 90, scale: 0.8 }
+              }
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              exit={
+                reduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, rotate: expanded ? 90 : -90, scale: 0.8 }
+              }
+              transition={{
+                duration: reduceMotion ? 0.1 : 0.22,
+                ease: EASE_OUT,
+              }}
+            >
+              {expanded ? <Cross16 /> : <ChevronDown16 />}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      </motion.button>
+
+      {/* Collapsed, the whole card is the target; expanded, the pills are, so
+          this steps aside. It stays mounted either way — closing hands focus
+          back to it, and an unmounted trigger can't take focus. */}
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={expanded}
+        aria-hidden={expanded || undefined}
+        tabIndex={expanded ? -1 : 0}
+        aria-label={`${V14_CALL_CAPTION[value].replace("\n", " ")}. Change.`}
+        onPointerDown={() => setPressed(true)}
+        onPointerUp={() => setPressed(false)}
+        onPointerCancel={() => setPressed(false)}
+        onPointerLeave={() => setPressed(false)}
+        onClick={() => {
+          setPressed(false);
+          toggle();
+          hapticTick();
+        }}
+        className={`absolute inset-0 z-10 rounded-t-[24px] rounded-b-[20px] ${
+          expanded ? "pointer-events-none" : "cursor-pointer"
+        } ${FOCUS_RING}`}
+      />
     </motion.div>
   );
 }

@@ -50,7 +50,7 @@ export const V12_CARDS: V12Card[] = [
     id: "handoff",
     groupLabel: "Handing over the order",
     options: [
-      { id: "hand", glyph: "doorOpen", caption: "Don’t leave\nitems at door", sound: false },
+      { id: "hand", glyph: "doorOpen", caption: "Hand it to me\nif I’m home", sound: false },
       { id: "door", glyph: "door", caption: "Leave items\nat door", sound: false },
     ],
   },

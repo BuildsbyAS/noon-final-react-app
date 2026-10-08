@@ -59,10 +59,21 @@ export function useExpandable({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
-  const close = useCallback(() => setOpen(false), []);
+  // Closing from inside the card (Escape, the close button, a pick) hands focus
+  // back to its trigger — once it's reachable again, not while it's still
+  // hidden. An outside tap doesn't: the user has already put focus elsewhere.
+  const returnFocus = useRef(false);
+  const close = useCallback((opts?: { returnFocus?: boolean }) => {
+    returnFocus.current = opts?.returnFocus ?? false;
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     onOpenChange?.(open);
+    if (!open && returnFocus.current) {
+      returnFocus.current = false;
+      triggerRef.current?.focus();
+    }
   }, [open, onOpenChange]);
 
   useEffect(() => {
@@ -86,8 +97,7 @@ export function useExpandable({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      close();
-      triggerRef.current?.focus();
+      close({ returnFocus: true });
     };
 
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -112,7 +122,7 @@ export function useExpandable({
  *  Answer pills — Figma 1241:14044 / 1241:14047
  * ================================================================ */
 
-export type PanelOption = { id: string; label: string; glyph: V14GlyphId };
+export type PanelOption = { id: string; label: string; glyph?: V14GlyphId };
 
 /**
  * v14's calling card is the leftmost item, so its LEFT edge is pinned and
@@ -146,7 +156,9 @@ export function AnswerPill({
       whileTap={reduceMotion ? undefined : { scale: 0.96 }}
       // Hover tints the surface only — border and ink are animated by Motion,
       // and an inline style would win over a CSS hover anyway.
-      className="flex shrink-0 items-center gap-1.5 rounded-full border border-solid bg-white py-2.5 pl-3 pr-2.5 whitespace-nowrap cursor-pointer outline-none transition-[background-color] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:2px] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#f4f5f9]"
+      // With an icon, Figma's 12/10 padding balances the glyph; text alone
+      // gets even sides.
+      className={`flex shrink-0 items-center gap-1.5 rounded-full border border-solid bg-white py-2.5 ${option.glyph ? "pl-3 pr-2.5" : "px-3"} whitespace-nowrap cursor-pointer outline-none transition-[background-color] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:2px] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#f4f5f9]`}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
       animate={{
         opacity: 1,
@@ -169,17 +181,30 @@ export function AnswerPill({
     >
       {/* 20px, matching the switch icons beside this card — at 18 the calling
           answers read smaller than everything they sit next to. */}
-      <StaticGlyph
-        glyph={option.glyph}
-        variant="outline"
-        size={20}
-        ink={selected ? INK_ACTION : INK_PRIMARY}
-      />
-      <span
-        className={`text-[14px] leading-5 tracking-[-0.1px] ${selected ? "font-semibold" : "font-medium"}`}
-        style={{ color: selected ? INK_ACTION : INK_PRIMARY }}
-      >
-        {option.label}
+      {option.glyph && (
+        <StaticGlyph
+          glyph={option.glyph}
+          variant="outline"
+          size={20}
+          ink={selected ? INK_ACTION : INK_PRIMARY}
+        />
+      )}
+      {/* Figma picks the answer out in SemiBold. A weight change reflows the
+          text, so an invisible SemiBold copy holds the width: picking changes
+          how the label looks, never how wide the pill is. */}
+      <span className="grid text-[14px] leading-5 tracking-[-0.1px]">
+        <span
+          aria-hidden="true"
+          className="invisible col-start-1 row-start-1 font-semibold"
+        >
+          {option.label}
+        </span>
+        <span
+          className={`col-start-1 row-start-1 ${selected ? "font-semibold" : "font-medium"}`}
+          style={{ color: selected ? INK_ACTION : INK_PRIMARY }}
+        >
+          {option.label}
+        </span>
       </span>
     </motion.button>
   );

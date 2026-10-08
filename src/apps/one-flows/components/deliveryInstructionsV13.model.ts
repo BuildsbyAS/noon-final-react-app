@@ -3,11 +3,13 @@
  *
  * v11's card and answers; only the calling interaction changes. Instead of an
  * action sheet, the calling chip EXPANDS in place into a panel holding the two
- * answers, and the chips to its left are pushed out of the card. Owned by v13 —
- * nothing is imported from v11.
+ * answers. Calling leads the row, so it opens rightwards and pushes the two
+ * toggles off the card's right edge. Owned by v13 — nothing is imported from
+ * v11.
  */
 
-export type V13CallChoice = "call" | "noCall";
+/** Three answers: always call, call only if needed, or avoid calling. */
+export type V13CallChoice = "call" | "ifNeeded" | "avoid";
 
 export type V13Value = {
   leaveAtDoor: boolean;
@@ -19,7 +21,7 @@ export type V13Value = {
 export const DEFAULT_V13_VALUE: V13Value = {
   leaveAtDoor: false,
   noRing: false,
-  call: "call",
+  call: "ifNeeded",
   save: true,
 };
 
@@ -27,13 +29,23 @@ export const DEFAULT_V13_VALUE: V13Value = {
 export const V13_LABEL = {
   leaveAtDoor: "Leave items\nat the door",
   noRing: "Don’t ring\nmy doorbell",
-  call: "Call me\nif needed",
-  noCall: "Don’t call me\nat delivery",
 } as const;
 
-/** The expanded panel (1241:14043): a question over two answer pills. */
+/** What the calling chip says once an answer is picked. */
+export const V13_CALL_LABEL: Record<V13CallChoice, string> = {
+  call: "Call me\nat delivery",
+  ifNeeded: "Call me\nif needed",
+  avoid: "Avoid\ncalling me",
+};
+
+/**
+ * The expanded panel (1241:14043): a question over three answer pills. They
+ * carry no icons — two answers would share the same phone, and with icons the
+ * three measure ~375px against the 327 this row has.
+ */
 export const V13_PANEL_TITLE = "What should the rider do?";
 export const V13_PANEL_OPTIONS = [
-  { id: "call", label: "Call me", glyph: "callRinging" },
-  { id: "noCall", label: "Don’t call me", glyph: "callOff" },
+  { id: "call", label: "Call" },
+  { id: "ifNeeded", label: "Call if needed" },
+  { id: "avoid", label: "Avoid calling" },
 ] as const;
