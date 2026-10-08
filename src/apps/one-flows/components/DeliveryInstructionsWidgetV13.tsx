@@ -2,15 +2,16 @@
  * "Instructions your rider" — v13 (Figma 1205:12054 / 1205:12152, 351×205)
  *
  * v11, with one interaction changed: calling is answered IN PLACE. The chip
- * doesn't summon an action sheet — it grows into one. Tapping it widens the
- * same chip into a panel ("What should the rider do?" over Call me / Don't
- * call me) and the two toggles to its left are pushed off the card's edge,
- * the outermost fading out as it goes. Picking an answer collapses the chip
- * back to v11's resting state. Copied, never imported: v13 owns every piece.
+ * doesn't summon an action sheet — it grows into one. Calling leads the row,
+ * so tapping it widens the same chip rightwards into a panel ("What should the
+ * rider do?" over Call me if needed / Avoid calling) and the two toggles are
+ * pushed off the card's right edge, the outermost fading out as it goes.
+ * Picking an answer collapses the chip back to v11's resting state. Copied,
+ * never imported: v13 owns every piece.
  *
- * Three chips:
- *  - Leave items at the door, Don't ring my doorbell — TOGGLES (checkbox).
+ * Three chips, in this order:
  *  - Call me if needed — EXPANDS into the calling panel.
+ *  - Leave items at the door, Don't ring my doorbell — TOGGLES (checkbox).
  *
  * v4's showcase motion, as in v11: every change plays a short illustration
  * clip full-bleed inside the chip, and only when it ends does the chip settle
@@ -24,10 +25,10 @@
  * blooms from the tap point, the ring latches, the checkbox pops last; turning
  * it off dims the blue from the whole surface. (Copied from v5's engine.)
  *
- * The chip's round button is one element across both states — it holds its
- * place at the corner as the chip widens, and only the glyph inside crossfades
- * chevron → cross. That's what makes the panel read as the chip itself rather
- * than something new arriving.
+ * The chip's round button is one element across both states — it rides the
+ * sweeping right edge like a handle on the thing being pulled open, and only
+ * the glyph inside crossfades chevron → cross. That's what makes the panel read
+ * as the chip itself rather than something new arriving.
  *
  * Calling starts on "Call me if needed".
  *
@@ -64,6 +65,7 @@ import {
 } from "./deliveryInstructionsV13Panel";
 import {
   DEFAULT_V13_VALUE,
+  V13_CALL_LABEL,
   V13_LABEL,
   V13_PANEL_OPTIONS,
   V13_PANEL_TITLE,
@@ -80,7 +82,6 @@ import callMeClip from "../assets/delivery-instructions-v13/call-me.mp4";
 const INK_PRIMARY = "#1d2539";
 const INK_TERTIARY = "#666d85";
 const SURFACE_CHIP = "#f9f9fb";
-const SURFACE_TERTIARY = "#f2f3f7";
 /** The hairline ring around the chip's round button. */
 const BORDER_CHEVRON = "#d0d4dd";
 
@@ -522,11 +523,15 @@ function ToggleChip({
 
 const CALL_GLYPH: Record<V13CallChoice, V13GlyphId> = {
   call: "callRinging",
-  noCall: "callOff",
+  ifNeeded: "callRinging",
+  avoid: "callOff",
 };
-const CALL_LABEL: Record<V13CallChoice, string> = {
-  call: V13_LABEL.call,
-  noCall: V13_LABEL.noCall,
+const CALL_LABEL = V13_CALL_LABEL;
+/** Two clips cover three answers: both calling answers play call-me. */
+const CALL_CLIP: Record<V13CallChoice, "call" | "noCall"> = {
+  call: "call",
+  ifNeeded: "call",
+  avoid: "noCall",
 };
 
 /* ================================================================
@@ -595,11 +600,14 @@ export default function DeliveryInstructionsWidgetV13({
     // play() has to run inside the tap for iOS, so the clip starts now — but
     // it stays hidden for a beat (see CLIP_REVEAL_DELAY_S) while the pill you
     // just chose holds its answer. Then the chip closes over it.
-    callClips.start(next);
-    window.setTimeout(close, reduceMotion ? 0 : PICK_BEAT_MS);
+    callClips.start(CALL_CLIP[next]);
+    window.setTimeout(
+      () => close({ returnFocus: true }),
+      reduceMotion ? 0 : PICK_BEAT_MS,
+    );
   };
 
-  /** The two toggles: pushed out of the card, the outermost fading as it goes. */
+  /** The two toggles: pushed out of the card, the outermost (rightmost) fading as it goes. */
   const pushed = (fade: boolean) => ({
     initial: false as const,
     animate: {
@@ -629,46 +637,9 @@ export default function DeliveryInstructionsWidgetV13({
           <InfoCircle16 />
         </div>
 
-        {/* justify-end: when the calling chip widens past the row, the toggles
-            are what overflows, off the card's left edge. */}
-        <div className="flex shrink-0 items-start justify-end gap-2.5 px-3 pt-1 pb-3">
-          <motion.div
-            {...pushed(true)}
-            className="shrink-0"
-            style={{ width: CHIP_W }}
-            aria-hidden={expanded}
-            inert={expanded || undefined}
-          >
-            <ToggleChip
-              glyph="door"
-              label={V13_LABEL.leaveAtDoor}
-              checked={value.leaveAtDoor}
-              clipOn={leaveAtDoorClip}
-              clipOff={giveItemsClip}
-              onToggle={() =>
-                onChange({ ...value, leaveAtDoor: !value.leaveAtDoor })
-              }
-              reduceMotion={reduceMotion}
-            />
-          </motion.div>
-          <motion.div
-            {...pushed(false)}
-            className="shrink-0"
-            style={{ width: CHIP_W }}
-            aria-hidden={expanded}
-            inert={expanded || undefined}
-          >
-            <ToggleChip
-              glyph="bellOff"
-              label={V13_LABEL.noRing}
-              checked={value.noRing}
-              clipOn={dontRingClip}
-              clipOff={ringBellClip}
-              onToggle={() => onChange({ ...value, noRing: !value.noRing })}
-              reduceMotion={reduceMotion}
-            />
-          </motion.div>
-
+        {/* Calling leads. When it widens past the row, the toggles are what
+            overflows — off the card's right edge. */}
+        <div className="flex shrink-0 items-start gap-2.5 px-3 pt-1 pb-3">
           {/* The calling chip IS the panel: one box that changes width. It's
               also the whole of the "inside": a tap anywhere else — including
               the card space the toggles just vacated — dismisses. */}
@@ -695,12 +666,12 @@ export default function DeliveryInstructionsWidgetV13({
           >
             {/* Panel — always mounted so its width can be measured; it only
                 becomes visible (and reachable) once the chip has room for it.
-                Pinned to the chip's right edge, which is the edge that doesn't
-                move: opening sweeps the LEFT edge out and uncovers this, so the
-                words are revealed rather than dragged along. */}
+                Pinned to the chip's LEFT edge, the one that doesn't move now
+                that calling leads the row: opening sweeps the right edge out
+                and uncovers this, so the words are revealed, not dragged. */}
             <motion.div
               ref={panelRef}
-              className="absolute top-0 right-0 flex w-max flex-col gap-4 p-2.5"
+              className="absolute top-0 left-0 flex w-max flex-col gap-4 p-2.5"
               initial={false}
               animate={{
                 opacity: expanded ? 1 : 0,
@@ -734,7 +705,6 @@ export default function DeliveryInstructionsWidgetV13({
                         key={option.id}
                         option={option}
                         index={i}
-                        lastIndex={V13_PANEL_OPTIONS.length - 1}
                         selected={value.call === option.id}
                         onSelect={() => pick(option.id)}
                         reduceMotion={reduceMotion}
@@ -748,7 +718,7 @@ export default function DeliveryInstructionsWidgetV13({
                 Never a target itself: the chip's own button is, and while the
                 panel is open this layer must not swallow taps meant for it. */}
             <motion.div
-              className="absolute top-0 right-0 h-full flex flex-col items-start gap-4 p-2.5 pointer-events-none"
+              className="absolute top-0 left-0 h-full flex flex-col items-start gap-4 p-2.5 pointer-events-none"
               style={{ width: CHIP_W }}
               initial={false}
               animate={{
@@ -819,16 +789,16 @@ export default function DeliveryInstructionsWidgetV13({
               </span>
             </motion.div>
 
-            {/* One button across both states: it holds the corner while the chip
-                widens underneath it, and only its glyph changes. */}
+            {/* One button across both states. It rides the sweeping right edge
+                like a handle on the thing being pulled open, and only its glyph
+                changes — which is what makes this read as the chip itself. */}
             <motion.button
-              ref={triggerRef}
               type="button"
               aria-label="Close"
               aria-hidden={!expanded}
               tabIndex={expanded ? 0 : -1}
               onClick={() => {
-                close();
+                close({ returnFocus: true });
                 hapticTick();
               }}
               whileTap={reduceMotion ? undefined : { scale: 0.96 }}
@@ -878,36 +848,72 @@ export default function DeliveryInstructionsWidgetV13({
             </motion.button>
 
             {/* Collapsed, the whole chip is the target; expanded, the panel's own
-                controls are, so this steps aside. */}
-            {!expanded && (
-              <button
-                type="button"
-                aria-haspopup="true"
-                aria-expanded={expanded}
-                aria-label={`${CALL_LABEL[value.call].replace("\n", " ")}. Change.`}
-                onPointerDown={() => setPressed(true)}
-                onPointerUp={() => setPressed(false)}
-                onPointerCancel={() => setPressed(false)}
-                onPointerLeave={() => setPressed(false)}
-                onClick={() => {
-                  setPressed(false);
-                  toggle();
-                  hapticTick();
-                }}
-                className={`absolute inset-0 z-20 rounded-12 cursor-pointer ${FOCUS_RING}`}
-              />
-            )}
+                controls are, so this steps aside. It stays mounted either way —
+                closing hands focus back to it, and an unmounted trigger can't
+                take focus. */}
+            <button
+              ref={triggerRef}
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={expanded}
+              aria-hidden={expanded || undefined}
+              tabIndex={expanded ? -1 : 0}
+              aria-label={`${CALL_LABEL[value.call].replace("\n", " ")}. Change.`}
+              onPointerDown={() => setPressed(true)}
+              onPointerUp={() => setPressed(false)}
+              onPointerCancel={() => setPressed(false)}
+              onPointerLeave={() => setPressed(false)}
+              onClick={() => {
+                setPressed(false);
+                toggle();
+                hapticTick();
+              }}
+              className={`absolute inset-0 z-20 rounded-12 ${
+                expanded ? "pointer-events-none" : "cursor-pointer"
+              } ${FOCUS_RING}`}
+            />
 
             {callClips.video("call", callMeClip)}
             {callClips.video("noCall", avoidCallingClip)}
           </motion.div>
-        </div>
 
-        <div
-          aria-hidden="true"
-          className="h-px w-full shrink-0"
-          style={{ backgroundColor: SURFACE_TERTIARY }}
-        />
+          <motion.div
+            {...pushed(false)}
+            className="shrink-0"
+            style={{ width: CHIP_W }}
+            aria-hidden={expanded}
+            inert={expanded || undefined}
+          >
+            <ToggleChip
+              glyph="door"
+              label={V13_LABEL.leaveAtDoor}
+              checked={value.leaveAtDoor}
+              clipOn={leaveAtDoorClip}
+              clipOff={giveItemsClip}
+              onToggle={() =>
+                onChange({ ...value, leaveAtDoor: !value.leaveAtDoor })
+              }
+              reduceMotion={reduceMotion}
+            />
+          </motion.div>
+          <motion.div
+            {...pushed(true)}
+            className="shrink-0"
+            style={{ width: CHIP_W }}
+            aria-hidden={expanded}
+            inert={expanded || undefined}
+          >
+            <ToggleChip
+              glyph="bellOff"
+              label={V13_LABEL.noRing}
+              checked={value.noRing}
+              clipOn={dontRingClip}
+              clipOff={ringBellClip}
+              onToggle={() => onChange({ ...value, noRing: !value.noRing })}
+              reduceMotion={reduceMotion}
+            />
+          </motion.div>
+        </div>
 
         <button
           type="button"
@@ -917,7 +923,7 @@ export default function DeliveryInstructionsWidgetV13({
             onChange({ ...value, save: !value.save });
             hapticTick();
           }}
-          className={`flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-left cursor-pointer ${FOCUS_RING}`}
+          className={`flex shrink-0 items-center gap-1.5 px-3.5 pt-0.5 pb-3 text-left cursor-pointer ${FOCUS_RING}`}
         >
           <InstructionCheckbox
             checked={value.save}

@@ -58,10 +58,21 @@ export function useExpandable({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
-  const close = useCallback(() => setOpen(false), []);
+  // Closing from inside the chip (Escape, the close button, a pick) hands focus
+  // back to its trigger — once it's reachable again, not while it's still
+  // hidden. An outside tap doesn't: the user has already put focus elsewhere.
+  const returnFocus = useRef(false);
+  const close = useCallback((opts?: { returnFocus?: boolean }) => {
+    returnFocus.current = opts?.returnFocus ?? false;
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     onOpenChange?.(open);
+    if (!open && returnFocus.current) {
+      returnFocus.current = false;
+      triggerRef.current?.focus();
+    }
   }, [open, onOpenChange]);
 
   useEffect(() => {
@@ -85,8 +96,7 @@ export function useExpandable({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      close();
-      triggerRef.current?.focus();
+      close({ returnFocus: true });
     };
 
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -111,12 +121,12 @@ export function useExpandable({
  *  Answer pills — Figma 1241:14044 / 1241:14047
  * ================================================================ */
 
-export type PanelOption = { id: string; label: string; glyph: V13GlyphId };
+export type PanelOption = { id: string; label: string; glyph?: V13GlyphId };
 
 /**
- * The chip's right edge is pinned, so opening sweeps its LEFT edge outwards and
- * uncovers the pills right-to-left. The stagger runs the same way, so each pill
- * brightens as the edge passes it rather than against it.
+ * Calling leads the row, so the chip's LEFT edge is pinned and opening sweeps
+ * its right edge outwards, uncovering the pills left-to-right. The stagger runs
+ * the same way, so each pill brightens as the edge passes it.
  */
 const PILL_STAGGER_S = 0.045;
 
@@ -124,19 +134,17 @@ export function AnswerPill({
   option,
   selected,
   index,
-  lastIndex,
   onSelect,
   reduceMotion,
 }: {
   option: PanelOption;
   selected: boolean;
+  /** Position in the reveal order — the edge uncovers index 0 first. */
   index: number;
-  /** Used to invert the stagger, so it follows the edge that reveals them. */
-  lastIndex: number;
   onSelect: () => void;
   reduceMotion: boolean;
 }) {
-  const delay = 0.08 + (lastIndex - index) * PILL_STAGGER_S;
+  const delay = 0.08 + index * PILL_STAGGER_S;
   return (
     <motion.button
       type="button"
@@ -146,7 +154,9 @@ export function AnswerPill({
       whileTap={reduceMotion ? undefined : { scale: 0.96 }}
       // Hover tints the surface only — border and ink are animated by Motion,
       // and an inline style would win over a CSS hover anyway.
-      className="flex shrink-0 items-center gap-1.5 rounded-full border border-solid bg-white py-2.5 pl-3 pr-2.5 whitespace-nowrap cursor-pointer outline-none transition-[background-color] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:2px] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#f4f5f9]"
+      // With an icon, Figma's 12/10 padding balances the glyph; text alone
+      // gets even sides.
+      className={`flex shrink-0 items-center gap-1.5 rounded-full border border-solid bg-white py-2.5 ${option.glyph ? "pl-3 pr-2.5" : "px-3"} whitespace-nowrap cursor-pointer outline-none transition-[background-color] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0f61ff] focus-visible:[outline-offset:2px] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#f4f5f9]`}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
       animate={{
         opacity: 1,
@@ -167,17 +177,30 @@ export function AnswerPill({
       }
       style={{ borderColor: selected ? INK_ACTION : BORDER_DEFAULT }}
     >
-      <V13Glyph
-        glyph={option.glyph}
-        size={18}
-        ink={selected ? INK_ACTION : INK_PRIMARY}
-        knockout="#ffffff"
-      />
-      <span
-        className={`text-[14px] leading-5 tracking-[-0.1px] ${selected ? "font-semibold" : "font-medium"}`}
-        style={{ color: selected ? INK_ACTION : INK_PRIMARY }}
-      >
-        {option.label}
+      {option.glyph && (
+        <V13Glyph
+          glyph={option.glyph}
+          size={18}
+          ink={selected ? INK_ACTION : INK_PRIMARY}
+          knockout="#ffffff"
+        />
+      )}
+      {/* Figma picks the answer out in SemiBold. A weight change reflows the
+          text, so an invisible SemiBold copy holds the width: picking changes
+          how the label looks, never how wide the pill (or the chip) is. */}
+      <span className="grid text-[14px] leading-5 tracking-[-0.1px]">
+        <span
+          aria-hidden="true"
+          className="invisible col-start-1 row-start-1 font-semibold"
+        >
+          {option.label}
+        </span>
+        <span
+          className={`col-start-1 row-start-1 ${selected ? "font-semibold" : "font-medium"}`}
+          style={{ color: selected ? INK_ACTION : INK_PRIMARY }}
+        >
+          {option.label}
+        </span>
       </span>
     </motion.button>
   );

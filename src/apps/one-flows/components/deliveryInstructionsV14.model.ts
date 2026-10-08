@@ -50,7 +50,7 @@ export const V14_CARDS: V14Card[] = [
       {
         id: "hand",
         glyph: "doorOpen",
-        caption: "Don’t leave\nitems at door",
+        caption: "Hand it to me\nif I’m home",
         sound: false,
       },
       {
@@ -63,26 +63,35 @@ export const V14_CARDS: V14Card[] = [
   },
 ];
 
-export type V14CallChoice = "call" | "noCall";
+/** Three answers: always call, call only if needed, or avoid calling. */
+export type V14CallChoice = "call" | "ifNeeded" | "avoid";
 
-/** The calling card's caption, which the expanded panel answers. */
+/**
+ * The calling card's caption, which the expanded panel answers. Each fits the
+ * card's 74px caption box in two lines.
+ */
 export const V14_CALL_CAPTION: Record<V14CallChoice, string> = {
-  call: "Call me\nif needed",
-  // "Don’t call me" needs ~83px; this card gives the caption 74. The panel
-  // spells the answer out in full — the card just has to name it.
-  noCall: "No calls\nat delivery",
+  call: "Call me\nat delivery",
+  ifNeeded: "Call me\nif needed",
+  avoid: "Avoid\ncalling me",
 };
 
 export const V14_CALL_GLYPH: Record<V14CallChoice, V14GlyphId> = {
   call: "call",
-  noCall: "callOff",
+  ifNeeded: "call",
+  avoid: "callOff",
 };
 
-/** The expanded panel (1243:14707). */
+/**
+ * The expanded panel (1243:14707). Three answers, so the pills drop their
+ * icons: two of them would carry the same phone and stop telling anything
+ * apart, and without icons all three fit one row at the card's own height.
+ */
 export const V14_PANEL_TITLE = "What should the rider do\nduring delivery?";
 export const V14_PANEL_OPTIONS = [
-  { id: "call", label: "Call me", glyph: "call" },
-  { id: "noCall", label: "Don’t call me", glyph: "callOff" },
+  { id: "call", label: "Call" },
+  { id: "ifNeeded", label: "Call if needed" },
+  { id: "avoid", label: "Avoid calling" },
 ] as const;
 
 /** Figma geometry (1243:14256). */
@@ -109,6 +118,6 @@ export type V14Value = {
 /** As Figma draws it. */
 export const DEFAULT_V14_VALUE: V14Value = {
   choice: { doorbell: "ring", handoff: "hand" },
-  call: "call",
+  call: "ifNeeded",
   save: true,
 };

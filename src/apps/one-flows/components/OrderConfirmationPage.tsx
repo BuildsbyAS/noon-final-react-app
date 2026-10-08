@@ -84,7 +84,7 @@ export type WidgetVariant = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 1
 const VARIANT_GROUPS: { title: string; items: { id: WidgetVariant; label: string }[] }[] = [
   {
     title: "Initial Iterations",
-    items: ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const).map((id) => ({ id, label: `v${id}` })),
+    items: ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const).map((id) => ({ id, label: `v${id}` })),
   },
   {
     title: "Final versions",
@@ -94,7 +94,6 @@ const VARIANT_GROUPS: { title: string; items: { id: WidgetVariant; label: string
       { id: 13, label: "v1" },
       { id: 12, label: "v2" },
       { id: 14, label: "v3" },
-      { id: 11, label: "v4" },
     ],
   },
 ];
@@ -627,7 +626,7 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
       <div
         className="absolute left-3 top-[471px] w-[351px] rounded-16 bg-white overflow-hidden"
         style={{
-          height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : v9 ? 252 : v10 ? 289 : v11 || v13 ? 205 : v12 || v14 ? 222 : 160,
+          height: v2 ? 232 : carousel ? 214 : partner ? 263 : v8 ? 264 : v9 ? 252 : v10 ? 289 : v11 ? 205 : v13 ? 194 : v12 || v14 ? 222 : 160,
           // v10's card sits 16px lower (room for the partner peeking over it).
           marginTop: v10 ? 16 : 0,
         }}
@@ -695,17 +694,18 @@ export function OrderConfirmationSkeleton({ variant = 1 }: { variant?: WidgetVar
           </>
         ) : v11 || v13 ? (
           <>
-            {/* v11 and v13: three ~102×100 chips at x 12 / 124 / 237 (y 48), a
-                divider at 160 and the save row at 173. */}
+            {/* v11 and v13: three ~102×100 chips at x 12 / 124 / 237 (y 48).
+                v11 has a divider at 160 and its save row at 173; v13 dropped
+                the divider, so its save row sits right under the chips, at 162. */}
             {[12, 124, 237].map((left) => (
               <div key={left} className="absolute top-12" style={{ left }}>
                 <Skel className="w-[102px] h-[100px] rounded-12" />
               </div>
             ))}
-            <div className="absolute left-[14px] top-[173px]">
+            <div className="absolute left-[14px]" style={{ top: v13 ? 162 : 173 }}>
               <Skel className="size-5 rounded-4" />
             </div>
-            <div className="absolute left-10 top-[173px]">
+            <div className="absolute left-10" style={{ top: v13 ? 162 : 173 }}>
               <Skel className="h-5 w-[240px] rounded-4" />
             </div>
           </>
